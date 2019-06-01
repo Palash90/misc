@@ -21,6 +21,18 @@ def pre_scan(exp):
                 segment = True
             else:
                 expr += letter
+        elif letter == '+':
+            #Write all the logic for positive number and addition
+            if idx == 0:
+                continue
+            elif exp[idx - 1] == "(":
+                continue
+            elif exp[idx - 1] in all_operators and exp[idx - 1] == "+":
+                continue
+            elif exp[idx - 1] in all_operators and exp[idx - 1] != ")":
+                continue
+            else:
+                expr += letter
 
         else:
             check = True
@@ -34,4 +46,4 @@ def pre_scan(exp):
                 expr += letter
     exp = expr
     return exp
-    #End of prescan
+#End of prescan

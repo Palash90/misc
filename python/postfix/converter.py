@@ -29,18 +29,15 @@ def is_valid_operand(operand):
 
 
 def handle_invalid_scenario(msg):
-    raise PostFixException(msg)
+    return msg
 
 
 def convert(exp):
-    expr = pre_scan(exp)
-
     operands = []
     stack = []
     operand = ""
     postFix = ""
     stack.append('(')
-    return expr
 
     def add_operand():
         nonlocal postFix, operand
@@ -54,7 +51,7 @@ def convert(exp):
 
     def add_operator(operator):
         nonlocal stack
-        if operator in allOperators:
+        if operator in all_operators:
             if operator == '(':
                 stack.append(operator)
             elif operator == 'log':
@@ -63,16 +60,18 @@ def convert(exp):
         else:
             return False
 
+    if len(exp) == 0:
+        print("Returning invalid exp for", exp)
+        handle_invalid_scenario("Invalid Expression: " + exp)
 
-'''
-    if exp[-1] in allOperators and exp[-1] != ')':
+    if len(exp) > 0 and exp[-1] in all_operators and exp[-1] != ')':
         handle_invalid_scenario(
             "Expression ends with an operator, which is invalid. System will exit"
         )
     exp += ')'
 
     for letter in exp:
-        if letter in allOperators:
+        if letter in all_operators:
             #Some operators can be more than one letter. So, checking if that is an operator
             check = add_operand() or add_operator(operand)
             if not check:
@@ -81,4 +80,4 @@ def convert(exp):
         else:
             operand += letter
     add_operand()
-'''
+    return postFix
