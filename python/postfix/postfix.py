@@ -1,7 +1,4 @@
 # A python utility to evaluate an Infix expression.
-import sys
-import math
-
 allOperators = {
     "+": 1,
     "-": 1,
@@ -52,12 +49,11 @@ def handle_invalid_scenario(msg):
     print(msg)
     print("System will exit")
     sys.exit(0)
-def log(a):
-    return math.log(a)
+
 
 def infix_to_postfix(exp):
     print("Evaluating", exp)
-    print(eval(exp))
+    
 
     #Prescan the expression to correctly identify the negation and subtraction
     newExp = list(exp)
@@ -86,8 +82,7 @@ def infix_to_postfix(exp):
     exp = expr
 
     print("Changed Expression", exp)
-    print(eval(exp))
-
+   
     #End of prescan
 
     operands = []
@@ -134,7 +129,4 @@ def infix_to_postfix(exp):
             operand += letter
     add_operand()
 
-
-#Call the infix to postfix converter to convert the expression
-exp = sys.argv[1]
-infix_to_postfix(exp)
+    return exp
