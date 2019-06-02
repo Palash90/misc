@@ -1,37 +1,133 @@
 # Operator with there Precedence.
 all_operators = {
-    "+": 1,
-    "-": 1,
-    "*": 2,
-    "/": 2,
-    "%": 2,
-    "^": 2,
-    "abs": 3,
-    "gcd": 3,
-    "ceil": 3,
-    "fact": 3,
-    "floor": 3,
-    "exp": 3,
-    "pow": 3,
-    "sqrt": 3,
-    "log": 3,
-    "ln": 3,
-    "log2": 3,
-    "sin": 3,
-    "cos": 3,
-    "tan": 3,
-    "asin": 3,
-    "acos": 3,
-    "atan": 3,
-    "sinh": 3,
-    "cosh": 3,
-    "tanh": 3,
-    "asinh": 3,
-    "acosh": 3,
-    "atanh": 3,
-    "hypot": 3,
-    "deg": 3,
-    "rad": 3,
+    "+": {
+        "precedence": 1,
+        "argument": 2
+    },
+    "-": {
+        "precedence": 1,
+        "argument": 2
+    },
+    "*": {
+        "precedence": 2,
+        "argument": 2
+    },
+    "/": {
+        "precedence": 2,
+        "argument": 2
+    },
+    "%": {
+        "precedence": 2,
+        "argument": 2
+    },
+    "^": {
+        "precedence": 2,
+        "argument": 2
+    },
+    "abs": {
+        "precedence": 3,
+        "argument": 1
+    },
+    "ceil": {
+        "precedence": 3,
+        "argument": 1
+    },
+    "fact": {
+        "precedence": 3,
+        "argument": 1
+    },
+    "floor": {
+        "precedence": 3,
+        "argument": 1
+    },
+    "gcd": {
+        "precedence": 3,
+        "argument": 2
+    },
+    "exp": {
+        "precedence": 3,
+        "argument": 1
+    },
+    "pow": {
+        "precedence": 3,
+        "argument": 2
+    },
+    "sqrt": {
+        "precedence": 3,
+        "argument": 1
+    },
+    "log": {
+        "precedence": 3,
+        "argument": 1
+    },
+    "ln": {
+        "precedence": 3,
+        "argument": 1
+    },
+    "log2": {
+        "precedence": 3,
+        "argument": 1
+    },
+    "sin": {
+        "precedence": 3,
+        "argument": 1
+    },
+    "cos": {
+        "precedence": 3,
+        "argument": 1
+    },
+    "tan": {
+        "precedence": 3,
+        "argument": 1
+    },
+    "asin": {
+        "precedence": 3,
+        "argument": 1
+    },
+    "acos": {
+        "precedence": 3,
+        "argument": 1
+    },
+    "atan": {
+        "precedence": 3,
+        "argument": 1
+    },
+    "sinh": {
+        "precedence": 3,
+        "argument": 1
+    },
+    "cosh": {
+        "precedence": 3,
+        "argument": 1
+    },
+    "tanh": {
+        "precedence": 3,
+        "argument": 1
+    },
+    "asinh": {
+        "precedence": 3,
+        "argument": 1
+    },
+    "acosh": {
+        "precedence": 3,
+        "argument": 1
+    },
+    "atanh": {
+        "precedence": 3,
+        "argument": 1
+    },
+    "hypot": {
+        "precedence": 3,
+        "argument": 2
+    },
+    "deg": {
+        "precedence": 3,
+        "argument": 1
+    },
+    "rad": {
+        "precedence": 3,
+        "argument": 1
+    },
     "(": 1,
     ")": 1
 }
