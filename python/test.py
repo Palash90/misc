@@ -3,7 +3,7 @@ from math import *
 import sys
 
 #Call the infix to postfix converter to convert the exprression
-
+'''
 tests = [
     "-", "-2", "-9*-4", "-2--7", "2+-7", "-(2*7*-7)-8", "-(2*7*-7)*-8",
     "-(2*7*-7)*(-8)", "-(2*7*-7)*cos(-8)", "-(2*7*(-7))*cos(-8)",
@@ -27,8 +27,10 @@ tests = [
             "y": 1
         }
     }
+    "2*4-3"
 ]
-
+'''
+tests = ["2.445*4-3.9*log(5)"]
 html = '<html><body><table border="1px solid black"><thead style="background-color: lightgray"><td>Original exprression</td><td>Variables</td><td>Prescanned exprression</td><td>Postfix exprression</td><td>Status</td><td>Result</td></thead>'
 
 for exp in tests:
@@ -42,7 +44,6 @@ for exp in tests:
         variables = None
     converted = p.prescan(expr)
     postfix = p.evaluate(expr, variables)
-    print(expr, converted, postfix)
     variableStr = str(variables) if variables is not None else "No Variable"
     html += "<tr><td>" + expr + "</td><td>" + variableStr + "</td><td>" + converted + "</td><td>" + postfix + "</td>"
     try:
@@ -52,7 +53,6 @@ for exp in tests:
         else:
             html += "<td>Failed</td><td>NA</td>"
     except:
-        print("In except")
         html += "<td>Evaluation failed</td><td>NA</td>"
     html += "</tr>"
 

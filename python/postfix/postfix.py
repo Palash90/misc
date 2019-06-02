@@ -17,8 +17,6 @@ class Postfix:
                 postfix = convert(prescanned, None)
             else:
                 postfix = convert(prescanned, variables)
-            print(exp, variables, postfix, "converted")
             return postfix
         except Exception as e:
-            print("Line 22: " + str(e))
             return str(e)
