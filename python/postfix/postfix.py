@@ -7,7 +7,6 @@ class Postfix:
         try:
             return pre_scan(exp)
         except Exception as e:
-            print(e)
             return str(e)
 
     def evaluate(self, exp, variables=None):

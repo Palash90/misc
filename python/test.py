@@ -25,13 +25,9 @@ tests = [
             "t": 1,
             "y": 1
         }
-    },
-    "2*4-3",
-    "2.445*4-3.9*log(5)"
+    }, "2*4-3", "cos(5)", "2.445*4-3.9*log(5, 10)", "2*4-3*log(5, 10)",
+    "((((ln(1)+2)*3)-cos((sqrt(4)+5)))+(sqrt(ln((6*4)))+4))"
 ]
-'''
-tests = ["2.445*4-3.9*log(5)"]
-'''
 html = '<html><body><table border="1px solid black"><thead style="background-color: lightgray"><td>Original exprression</td><td>Variables</td><td>Prescanned exprression</td><td>Postfix exprression</td><td>Status</td><td>Result</td></thead>'
 
 for exp in tests:

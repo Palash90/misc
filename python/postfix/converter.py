@@ -2,7 +2,7 @@
 from .prescan import pre_scan
 from .all_operators import all_operators
 from .handle_invalid_scenarios import handle_invalid_scenario
-from .default_variables import default_variables
+from .variables_operations import default_variables
 
 
 def is_float(x):
@@ -92,5 +92,6 @@ def convert(exp, variables):
         else:
             operand += letter
     add_operand()
+    postFix= postFix.replace(",", "")
     postFix= postFix.replace("  ", " ")
     return postFix
