@@ -2,6 +2,7 @@
 from .prescan import pre_scan
 from .all_operators import all_operators
 from .handle_invalid_scenarios import handle_invalid_scenario
+from .default_variables import default_variables
 
 
 def is_float(x):
@@ -30,6 +31,11 @@ def is_valid_operand(operand, variables):
 
 
 def convert(exp, variables):
+    if variables is not None:
+        variables = {**default_variables, **variables}
+    else:
+        variables = default_variables
+    print(variables)
     operands = []
     stack = []
     operand = ""

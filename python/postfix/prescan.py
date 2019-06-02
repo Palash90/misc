@@ -45,12 +45,14 @@ def pre_scan(exp):
                 check = False
             if check:
                 expr += letter
-    exp = expr
-
-    if len(exp) > 0:
+    
+    if len(expr) > 0:
         endsWith = exp[-1];
         if endsWith in all_operators and endsWith != ")":
-            handle_invalid_scenario("Expresssion ends with an operator - '" + exp + "'")
+            handle_invalid_scenario("Expresssion Error: ends with an operator - '" + exp + "'")
+    exp = expr
+
+    
 
     return exp
 
