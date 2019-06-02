@@ -128,6 +128,12 @@ all_operators = {
         "precedence": 3,
         "argument": 1
     },
-    "(": 1,
-    ")": 1
+    "(": {
+        "precedence": 0,
+        "argument": 1
+    },
+    ")": {
+        "precedence": 0,
+        "argument": 1
+    }
 }

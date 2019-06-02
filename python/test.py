@@ -3,7 +3,6 @@ from math import *
 import sys
 
 #Call the infix to postfix converter to convert the exprression
-'''
 tests = [
     "-", "-2", "-9*-4", "-2--7", "2+-7", "-(2*7*-7)-8", "-(2*7*-7)*-8",
     "-(2*7*-7)*(-8)", "-(2*7*-7)*cos(-8)", "-(2*7*(-7))*cos(-8)",
@@ -26,11 +25,13 @@ tests = [
             "t": 1,
             "y": 1
         }
-    }
-    "2*4-3"
+    },
+    "2*4-3",
+    "2.445*4-3.9*log(5)"
 ]
 '''
 tests = ["2.445*4-3.9*log(5)"]
+'''
 html = '<html><body><table border="1px solid black"><thead style="background-color: lightgray"><td>Original exprression</td><td>Variables</td><td>Prescanned exprression</td><td>Postfix exprression</td><td>Status</td><td>Result</td></thead>'
 
 for exp in tests:

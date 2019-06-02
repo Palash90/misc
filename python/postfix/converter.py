@@ -35,7 +35,6 @@ def convert(exp, variables):
         variables = {**default_variables, **variables}
     else:
         variables = default_variables
-    print(variables)
     operands = []
     stack = []
     operand = ""
@@ -53,12 +52,23 @@ def convert(exp, variables):
             return False
 
     def add_operator(operator):
-        nonlocal stack
+        nonlocal stack, postFix
         if operator in all_operators:
             if operator == '(':
                 stack.append(operator)
-            elif operator == 'log':
-                print("Need to write algo for log")
+            elif operator == ')':
+                stackOperator = stack.pop()
+                while stackOperator != '(':
+                    postFix += stackOperator + " "
+                    stackOperator = stack.pop()
+            else:
+                operatorPrecedence = all_operators[operator]["precedence"]
+                stackOperator = stack.pop()
+                while all_operators[stackOperator]["precedence"] >= operatorPrecedence:
+                    postFix += stackOperator + " "
+                    stackOperator = stack.pop()
+                stack.append(stackOperator)
+                stack.append(operator)
             return True
         else:
             return False
@@ -71,7 +81,6 @@ def convert(exp, variables):
             "Expression ends with an operator, which is invalid. System will exit"
         )
     exp += ')'
-
     for letter in exp:
         if letter in all_operators:
             #Some operators can be more than one letter. So, checking if that is an operator
@@ -79,7 +88,9 @@ def convert(exp, variables):
             if not check:
                 handle_invalid_scenario("Invalid input " + operand)
             operand = ""
+            add_operator(letter)
         else:
             operand += letter
     add_operand()
+    postFix= postFix.replace("  ", " ")
     return postFix
