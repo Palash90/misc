@@ -1,3 +1,4 @@
+# Operator with there Precedence.
 all_operators = {
     "+": 1,
     "-": 1,
@@ -7,14 +8,14 @@ all_operators = {
     "root": 2,
     "^": 2,
     "log": 2,
-    "sqrt": 1,
-    "fact": 1,
-    "ln": 1,
-    "Log": 1,
-    "abs": 1,
-    "sin": 1,
-    "cos": 1,
-    "tan": 1,
+    "sqrt": 2,
+    "fact": 2,
+    "ln": 2,
+    "Log": 2,
+    "abs": 2,
+    "sin": 2,
+    "cos": 2,
+    "tan": 2,
     "(": 1,
     ")": 1
 }

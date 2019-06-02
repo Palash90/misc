@@ -1,5 +1,6 @@
 #Prescan the expression to correctly identify the negation and subtraction
 from .all_operators import all_operators
+from .handle_invalid_scenarios import handle_invalid_scenario
 
 
 def pre_scan(exp):
@@ -45,5 +46,13 @@ def pre_scan(exp):
             if check:
                 expr += letter
     exp = expr
+
+    if len(exp) > 0:
+        endsWith = exp[-1];
+        if endsWith in all_operators and endsWith != ")":
+            handle_invalid_scenario("Expresssion ends with an operator - '" + exp + "'")
+
     return exp
+
+
 #End of prescan

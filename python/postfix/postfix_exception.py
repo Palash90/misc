@@ -1,2 +1,0 @@
-class PostfixException(Exception):
-    pass

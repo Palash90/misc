@@ -1,7 +1,7 @@
 # A python utility to evaluate an Infix expression.
 from .prescan import pre_scan
 from .all_operators import all_operators
-from .postfix_exception import PostfixException
+from .handle_invalid_scenarios import handle_invalid_scenario
 
 
 def is_float(x):
@@ -23,16 +23,13 @@ def is_int(x):
         return a == b
 
 
-def is_valid_operand(operand):
+def is_valid_operand(operand, variables):
     operand = operand.strip()
-    return is_float(operand) or is_int(operand) or len(operand) == 0
+    return is_float(operand) or is_int(operand) or len(operand) == 0 or (
+        variables is not None and operand in variables)
 
 
-def handle_invalid_scenario(msg):
-    return msg
-
-
-def convert(exp):
+def convert(exp, variables):
     operands = []
     stack = []
     operand = ""
@@ -42,7 +39,7 @@ def convert(exp):
     def add_operand():
         nonlocal postFix, operand
         operand = operand.strip()
-        if is_valid_operand(operand):
+        if is_valid_operand(operand, variables):
             operands.append(operand)
             postFix += operand + " "
             return True
@@ -61,7 +58,6 @@ def convert(exp):
             return False
 
     if len(exp) == 0:
-        print("Returning invalid exp for", exp)
         handle_invalid_scenario("Invalid Expression: " + exp)
 
     if len(exp) > 0 and exp[-1] in all_operators and exp[-1] != ')':
