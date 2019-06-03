@@ -41,7 +41,23 @@ tests = [
     "2*pow(2,3)*log(1000)",
     "2*pow(2,3)*log2(16)",
     "2*pow(2,3)*Log(16, 2)",
-    "2*pow(2,3)*ln(e^2)"
+    "2*pow(2,3)*ln(e^2)",
+    "-(2*7*-7)*sin(-8)",
+    "-(2*7*-7)*tan(-8)",
+    "-(2*7*-7)*sinh(-8)",
+    "-(2*7*-7)*cosh(-8)",
+    "-(2*7*-7)*tanh(-8)",
+    "-(2*7*-7)*atan(-8)",
+    "-(2*7*-7)*asin(-8)",
+    "-(2*7*-7)*acos(-8)",
+    "-(2*7*-7)*asin(-.8)",
+    "-(2*7*-7)*acos(-.8)",
+    "-(2*7*-7)*atanh(-8)",
+    "-(2*7*-7)*asinh(-8)",
+    "-(2*7*-7)*acosh(-8)",
+    "hypot(4,3)",
+    "deg(pi/3)",
+    "rad(60)"
 ]
 html = '<html><body><table border="1px solid black"><thead style="background-color: lightgray"><td>Sl. No.</td><td>Original exprression</td><td>Variables</td><td>Prescanned exprression</td><td>Postfix exprression</td><td>Postfix Result</td><td>Eval Result</td><td>Status</td></thead>'
 

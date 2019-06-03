@@ -33,8 +33,7 @@ def perform_operation(operator, arg):
     elif operator == 'gcd':
         if (is_int(arg[0]) == False) or (is_int(arg[1]) == False):
             handle_invalid_scenario(
-                "Value Error: " + format(arg[0]) + " , " +
-                format(arg[1]) +
+                "Value Error: " + format(arg[0]) + " , " + format(arg[1]) +
                 ". GCD can only be determined for integers.")
         return gcd(int(arg[1]), int(arg[0]))
     elif operator == 'exp':
@@ -51,22 +50,33 @@ def perform_operation(operator, arg):
         return log2(arg[0])
     elif operator == 'Log':
         return log(arg[1], arg[0])
-    '''
     elif operator == 'sin':
+        return sin(arg[0])
     elif operator == 'cos':
+        return cos(arg[0])
     elif operator == 'tan':
+        return tan(arg[0])
     elif operator == 'asin':
+        return asin(arg[0])
     elif operator == 'acos':
+        return acos(arg[0])
     elif operator == 'atan':
+        return atan(arg[0])
     elif operator == 'sinh':
+        return sinh(arg[0])
     elif operator == 'cosh':
+        return cosh(arg[0])
     elif operator == 'tanh':
+        return tanh(arg[0])
     elif operator == 'asinh':
+        return asinh(arg[0])
     elif operator == 'acosh':
+        return acosh(arg[0])
     elif operator == 'atanh':
+        return atanh(arg[0])
     elif operator == 'hypot':
+        return hypot(arg[1], arg[0])
     elif operator == 'deg':
+        return degrees(arg[0])
     elif operator == 'rad':
-
-perform_operation("x", "s"
-'''
+        return radians(arg[0])
