@@ -25,7 +25,10 @@ def evaluate(postfix, variables):
             argument  = stack.pop()
             if argument in variables:
                 argument = variables[argument]
-            arguments.append(argument)
+            check = is_int(argument) or is_float(argument)
+            if check == False:
+                handle_invalid_scenario("Value Error: invalid value passed", argument)
+            arguments.append(float(argument))
         result = perform_operation(operator, arguments)
         stack.append(result)
         

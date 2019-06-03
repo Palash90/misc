@@ -32,7 +32,7 @@ all_operators = {
         "precedence": 4,
         "argument": 1
     },
-    "fact": {
+    "factorial": {
         "precedence": 4,
         "argument": 1
     },

@@ -27,7 +27,11 @@ tests = [
         }
     }, "2*4-3", "cos(5)", "2.445*4-3.9*log(5, 10)", "2*4-3*log(5, 10)",
     "((((ln(1)+2)*3)-cos((sqrt(4)+5)))+(sqrt(ln((6*4)))+4))",
-    "2*3-2*8*5/2%3*abs(-4)"
+    "2*3-2*8*5/2%3*abs(-4)",
+    "2*3-2*8*5/2%3*abs(-4)*ceil(2)",
+    "2*3-2*8*5/2%3*abs(-4)*ceil(2)*factorial(2)",
+    "factorial(2)*2*3-2*8*5/2%3*abs(-4)*ceil(2)",
+    "2*3-2*8*5/2%3*abs(-4)*ceil(2.8)*factorial(2)",
 ]
 html = '<html><body><table border="1px solid black"><thead style="background-color: lightgray"><td>Sl. No.</td><td>Original exprression</td><td>Variables</td><td>Prescanned exprression</td><td>Postfix exprression</td><td>Postfix Result</td><td>Eval Result</td><td>Status</td></thead>'
 

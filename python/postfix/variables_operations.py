@@ -1,29 +1,38 @@
 from math import *
+from .utils import *
+from .handle_invalid_scenarios import handle_invalid_scenario
 default_variables = {"pi": pi, "e": e, "tau": 2 * pi}
 
 
 def perform_operation(operator, arguments):
+
     if operator == '+':
-        return float(arguments[1]) + float(arguments[0])
+        return arguments[1] + arguments[0]
     elif operator == '-':
-        return float(arguments[1]) - float(arguments[0])
+        return arguments[1] - arguments[0]
     elif operator == '*':
-        return float(arguments[1]) * float(arguments[0])
+        return arguments[1] * arguments[0]
     elif operator == '/':
-        return float(arguments[1]) / float(arguments[0])
+        return arguments[1] / arguments[0]
     elif operator == '%':
-        return float(arguments[1]) % float(arguments[0])
+        return arguments[1] % arguments[0]
     elif operator == '^':
-        return float(arguments[1])**float(arguments[0])
+        return arguments[1]**arguments[0]
     elif operator == 'abs':
         return abs(arguments[0])
-
-
-'''
     elif operator == 'ceil':
-    elif operator == 'fact':
+        return ceil(arguments[0])
+    elif operator == 'factorial':
+        if is_int(arguments[0]) == False:
+            handle_invalid_scenario(
+                "Value Error: " + argument[0] +
+                ". Factorial calculation can only be done for integers.")
+        return factorial(int(arguments[0]))
     elif operator == 'floor':
+        return floor(arguments[0])
     elif operator == 'gcd':
+        return gcd(arguments[1], arguments[1])
+        '''
     elif operator == 'exp':
     elif operator == 'pow':
     elif operator == 'sqrt':
@@ -46,5 +55,5 @@ def perform_operation(operator, arguments):
     elif operator == 'deg':
     elif operator == 'rad':
 
-perform_operation("x", "s")
+perform_operation("x", "s"
 '''
