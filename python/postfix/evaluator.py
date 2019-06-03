@@ -1,7 +1,7 @@
 # A python utility to evaluate an Infix expression.
 from .all_operators import all_operators
 from .handle_invalid_scenarios import handle_invalid_scenario
-from .variables_operations import default_variables
+from .variables_operations import *
 from .utils import is_valid_operand
 
 def evaluate(postfix, variables):
@@ -17,8 +17,18 @@ def evaluate(postfix, variables):
 
 
     def handle_operation(operator):
+        nonlocal stack
+        arguments = [];
+        operator_definition = all_operators[operator]
+        numOfOperand = operator_definition["argument"]
+        for x in range(numOfOperand):
+            argument  = stack.pop()
+            if argument in variables:
+                argument = variables[argument]
+            arguments.append(argument)
+        result = perform_operation(operator, arguments)
+        stack.append(result)
         
-
     for element in elements:
         if is_valid_operand(element, variables):
             stack.append(element)
@@ -29,6 +39,9 @@ def evaluate(postfix, variables):
             handle_operation(element)
         else:
             handle_invalid_scenario("Unknown Symbol in expression: " + element)
+    
+    result = stack[0]
         
 
-    print("Segments", elements, stack, operator)
+    print("Segments", elements, stack, operator, stack)
+    return float(stack[0])

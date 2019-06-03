@@ -1,14 +1,25 @@
 from math import *
 default_variables = {"pi": pi, "e": e, "tau": 2 * pi}
 
+
 def perform_operation(operator, arguments):
     if operator == '+':
+        return float(arguments[1]) + float(arguments[0])
     elif operator == '-':
+        return float(arguments[1]) - float(arguments[0])
     elif operator == '*':
+        return float(arguments[1]) * float(arguments[0])
     elif operator == '/':
+        return float(arguments[1]) / float(arguments[0])
     elif operator == '%':
+        return float(arguments[1]) % float(arguments[0])
     elif operator == '^':
+        return float(arguments[1])**float(arguments[0])
     elif operator == 'abs':
+        return abs(arguments[0])
+
+
+'''
     elif operator == 'ceil':
     elif operator == 'fact':
     elif operator == 'floor':
@@ -36,3 +47,4 @@ def perform_operation(operator, arguments):
     elif operator == 'rad':
 
 perform_operation("x", "s")
+'''

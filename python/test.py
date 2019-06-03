@@ -26,9 +26,12 @@ tests = [
             "y": 1
         }
     }, "2*4-3", "cos(5)", "2.445*4-3.9*log(5, 10)", "2*4-3*log(5, 10)",
-    "((((ln(1)+2)*3)-cos((sqrt(4)+5)))+(sqrt(ln((6*4)))+4))"
+    "((((ln(1)+2)*3)-cos((sqrt(4)+5)))+(sqrt(ln((6*4)))+4))",
+    "2*3-2*8*5/2%3*abs(-4)"
 ]
-html = '<html><body><table border="1px solid black"><thead style="background-color: lightgray"><td>Original exprression</td><td>Variables</td><td>Prescanned exprression</td><td>Postfix exprression</td><td>Status</td><td>Result</td></thead>'
+html = '<html><body><table border="1px solid black"><thead style="background-color: lightgray"><td>Sl. No.</td><td>Original exprression</td><td>Variables</td><td>Prescanned exprression</td><td>Postfix exprression</td><td>Postfix Result</td><td>Eval Result</td><td>Status</td></thead>'
+
+serial = 1
 
 for exp in tests:
     p = Postfix()
@@ -40,18 +43,25 @@ for exp in tests:
         expr = exp
         variables = None
     converted = p.prescan(expr)
-    postfix = p.evaluate(expr, variables)
+    postfix = p.convert(expr, variables)
     variableStr = str(variables) if variables is not None else "No Variable"
-    html += "<tr><td>" + expr + "</td><td>" + variableStr + "</td><td>" + converted + "</td><td>" + postfix + "</td>"
+    html += "<tr><td>" + format(
+        serial
+    ) + "</td><td>" + expr + "</td><td>" + variableStr + "</td><td>" + converted + "</td><td>" + postfix + "</td>"
     try:
-        if eval(converted) == eval(expr):
-            result = eval(expr)
-            html += "<td>Passed</td><td>" + format(result) + "</td>"
+        result = p.evaluate(converted, variables)
+        html += "<td>" + format(result) + "</td><td>" + format(
+            eval(exp)) + "</td>"
+        if result == eval(expr):
+            html += "<td>Passed</td>"
         else:
-            html += "<td>Failed</td><td>NA</td>"
+            html += "<td>Failed</td>"
     except:
-        html += "<td>Evaluation failed</td><td>NA</td>"
+        print(result)
+        html += "<td>" + format(
+            result) + "</td><td>NA</td><td>Evaluation failed</td>"
     html += "</tr>"
+    serial += 1
 
 f = open("result.html", "w")
 f.write(html)

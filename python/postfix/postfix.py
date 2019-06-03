@@ -10,14 +10,21 @@ class Postfix:
         except Exception as e:
             return str(e)
 
-    def evaluate(self, exp, variables=None):
+    def convert(self, exp, variables=None):
         try:
             prescanned = pre_scan(exp)
             if variables is None:
                 postfix = convert(prescanned, None)
             else:
                 postfix = convert(prescanned, variables)
-            result = evaluate(postfix, variables)
             return postfix
+        except Exception as e:
+            return str(e)
+
+    def evaluate(self, exp, variables=None):
+        try:
+            postfix = convert(exp, variables)
+            result = evaluate(postfix, variables)
+            return result
         except Exception as e:
             return str(e)

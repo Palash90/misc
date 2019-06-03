@@ -141,6 +141,3 @@ all_operators = {
         "argument": 1
     }
 }
-
-for key in all_operators.keys():
-    print("elif operator == '"+ key+ "':")
