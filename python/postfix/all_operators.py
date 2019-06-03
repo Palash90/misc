@@ -68,6 +68,10 @@ all_operators = {
         "precedence": 4,
         "argument": 1
     },
+    "Log": {
+        "precedence": 4,
+        "argument": 2
+    },
     "sin": {
         "precedence": 4,
         "argument": 1

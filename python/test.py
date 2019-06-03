@@ -35,7 +35,13 @@ tests = [
     "2*3-2*8*5/2%3*abs(-4)*ceil(2.8)*factorial(2)*gcd(5,15)",
     "2*3-2*8*5/2%3*abs(-4)*ceil(2.8)*factorial(2)*gcd(5.2,15)",
     "2*3-2*8*5/2%3*abs(-4)*ceil(2.8)*factorial(1.2)*gcd(5,15)",
-    "2*3-2*8*5/2*exp(2)"
+    "2*3-2*8*5/2*exp(2)",
+    "2*pow(2,3)",
+    "2*pow(2,3)*sqrt(4)",
+    "2*pow(2,3)*log(1000)",
+    "2*pow(2,3)*log2(16)",
+    "2*pow(2,3)*Log(16, 2)",
+    "2*pow(2,3)*ln(e^2)"
 ]
 html = '<html><body><table border="1px solid black"><thead style="background-color: lightgray"><td>Sl. No.</td><td>Original exprression</td><td>Variables</td><td>Prescanned exprression</td><td>Postfix exprression</td><td>Postfix Result</td><td>Eval Result</td><td>Status</td></thead>'
 

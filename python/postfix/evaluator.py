@@ -47,4 +47,7 @@ def evaluate(postfix, variables):
         
 
     print("Segments", elements, stack, operator, stack)
-    return float(stack[0])
+    if is_int(stack[0]):
+        return int(stack[0])
+    else:
+        return float(stack[0])
