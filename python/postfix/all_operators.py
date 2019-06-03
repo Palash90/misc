@@ -21,7 +21,7 @@ all_operators = {
         "argument": 2
     },
     "^": {
-        "precedence": 3,
+        "precedence": 4,
         "argument": 2
     },
     "abs": {
@@ -141,3 +141,6 @@ all_operators = {
         "argument": 1
     }
 }
+
+for key in all_operators.keys():
+    print("elif operator == '"+ key+ "':")

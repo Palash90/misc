@@ -1,5 +1,6 @@
 from .prescan import pre_scan
 from .converter import convert
+from .evaluator import evaluate
 
 
 class Postfix:
@@ -16,6 +17,7 @@ class Postfix:
                 postfix = convert(prescanned, None)
             else:
                 postfix = convert(prescanned, variables)
+            result = evaluate(postfix, variables)
             return postfix
         except Exception as e:
             return str(e)
