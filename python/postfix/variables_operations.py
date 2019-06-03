@@ -25,15 +25,21 @@ def perform_operation(operator, arguments):
     elif operator == 'factorial':
         if is_int(arguments[0]) == False:
             handle_invalid_scenario(
-                "Value Error: " + argument[0] +
+                "Value Error: " + format(arguments[0]) +
                 ". Factorial calculation can only be done for integers.")
         return factorial(int(arguments[0]))
     elif operator == 'floor':
         return floor(arguments[0])
     elif operator == 'gcd':
-        return gcd(arguments[1], arguments[1])
-        '''
+        if (is_int(arguments[0]) == False) or (is_int(arguments[1]) == False):
+            handle_invalid_scenario(
+                "Value Error: " + format(arguments[0]) + " , " +
+                format(arguments[1]) +
+                ". GCD can only be determined for integers.")
+        return gcd(int(arguments[1]), int(arguments[0]))
     elif operator == 'exp':
+        return exp(arguments[0])
+    '''
     elif operator == 'pow':
     elif operator == 'sqrt':
     elif operator == 'log':
