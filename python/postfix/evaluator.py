@@ -9,8 +9,6 @@ def evaluate(postfix, variables):
         variables = {**default_variables, **variables}
     else:
         variables = default_variables
-    print()
-    print("Evaluating Postfix", postfix, "variables", variables)
     stack=[]
     operator =[]
     elements = postfix.split()
@@ -44,9 +42,7 @@ def evaluate(postfix, variables):
             handle_invalid_scenario("Unknown Symbol in expression: " + element)
     
     result = stack[0]
-        
-
-    print("Segments", elements, stack, operator, stack)
+       
     if is_int(stack[0]):
         return int(stack[0])
     else:
