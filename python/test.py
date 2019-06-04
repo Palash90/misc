@@ -101,7 +101,26 @@ tests = [
      "-(2*7*-----7)*cos(----8)",
      "sin(cos(45))",
      "deg(asin(cos(45)))",
-     "deg(asin(cos(rad(45))))"
+     "deg(asin(cos(rad(45))))",
+     "deg(acos(cos(rad(hypot(4, 3)))))",
+     {
+        "exp": "deg(acos(cos(rad(hypot(4, 3)))))+ y     *x^t",
+        "variables": {
+            "t": 16,
+            "x":4,
+            "y": 9
+        },
+        "convert": True
+    },
+     {
+        "exp": "atan(deg(acos(cos(rad(hypot(4, 3)))))+ y     *x^t)",
+        "variables": {
+            "t": 16,
+            "x":4,
+            "y": 9
+        },
+        "convert": True
+    }
 
 ]
 html = '<html><body><table border="1px solid black"><thead style="background-color: lightgray"><td>Sl. No.</td><td>Original exprression</td><td>Variables</td><td>Prescanned exprression</td><td>Postfix exprression</td><td>Postfix Result</td><td>Eval Result</td><td>Status</td></thead>'
