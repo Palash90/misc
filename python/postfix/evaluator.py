@@ -97,8 +97,9 @@ def evaluate(postfix, variables):
     
     result = stack[0]
     
-    if isinstance(result, str):
-        return variables[result]
+    if isinstance(result, str) and result in variables:
+        result = variables[result]
+    
     if is_int(result):
         return int(result)
     else:

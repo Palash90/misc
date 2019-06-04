@@ -9,7 +9,7 @@ html = '<html><body><table border="1px solid black"><thead style="background-col
 
 serial = 1
 
-#tests = ["e"]
+#tests = ["+2"]
 
 for exp in tests:
     p = Postfix()
@@ -42,7 +42,7 @@ for exp in tests:
         result = p.evaluate(expr, convert, variables)
         html += "<td>" + format(result) + "</td>"
     except Exception as e:
-       # raise e
+        #raise e
         html += "<td>" + str(e) + "</td>"
     try:
         evalresult = eval(exp)

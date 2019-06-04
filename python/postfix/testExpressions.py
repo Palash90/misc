@@ -141,6 +141,19 @@ tests = [
         },
         "convert": True
     }, {
+        "exp": "x + 0",
+        "variables": {
+            "x": {
+                "exp": "atan(deg(acos(cos(rad(hypot(4, 3)))))+ y     *x^t)",
+                "variables": {
+                    "t": 16,
+                    "x": "2*4 - 3",
+                    "y": 9
+                },
+                "convert": True
+            }
+        }
+    }, {
         "exp": "x*y + z^2",
         "variables": {
             "x": 2,
@@ -163,9 +176,18 @@ tests = [
                                         "exp": "log(9*y) - 2*cos(z)+ln(e^2)",
                                         "variables": {
                                             "y": {
-                                                "exp": "x",
+                                                "exp": "x + 0",
                                                 "variables": {
-                                                    "x": 5
+                                                    "x": {
+                                                        "exp":
+                                                        "atan(deg(acos(cos(rad(hypot(4, 3)))))+ y     *x^t)",
+                                                        "variables": {
+                                                            "t": 16,
+                                                            "x": "2*4 - 3",
+                                                            "y": 9
+                                                        },
+                                                        "convert": True
+                                                    }
                                                 }
                                             },
                                             "z": "e"
