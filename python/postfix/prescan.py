@@ -16,7 +16,10 @@ def pre_scan(exp):
             elif exp[idx - 1] == "(":
                 expr += "0" + letter
             elif exp[idx - 1] in all_operators and exp[idx - 1] == "-":
-                expr = expr[:-1] + '+'
+                if expr[-1] == '-':
+                    expr = expr[:-1] + '+'
+                else:
+                    expr = expr[:-1] + '-'
             elif exp[idx - 1] in all_operators and exp[idx - 1] != ")":
                 expr += "(0" + letter
                 segment = True
