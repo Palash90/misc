@@ -1,9 +1,13 @@
 #Prescan the expression to correctly identify the negation and subtraction
 from all_operators import all_operators
 from handle_invalid_scenarios import handle_invalid_scenario
+from utils import *
 
 
 def pre_scan(exp):
+    if is_float(exp) or is_int(exp):
+        return exp
+    
     exp = exp.replace(" ", "")
     expr = ''
     segment = False

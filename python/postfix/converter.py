@@ -2,9 +2,11 @@
 from all_operators import all_operators
 from handle_invalid_scenarios import handle_invalid_scenario
 from variables_operations import default_variables
-from utils import is_valid_operand
+from utils import *
 
 def convert(exp, variables):
+    if is_float(exp) or is_int(exp):
+        return exp
     if variables is not None:
         variables = {**default_variables, **variables}
     else:

@@ -2,10 +2,12 @@
 from all_operators import all_operators
 from handle_invalid_scenarios import handle_invalid_scenario
 from variables_operations import *
-from utils import is_valid_operand
+from utils import *
 from converter import convert
 
 def evaluate(postfix, variables):
+    if is_float(postfix) or is_int(postfix):
+        return postfix
     if variables is not None:
         variables = {**default_variables, **variables}
     else:

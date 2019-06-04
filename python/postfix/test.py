@@ -22,20 +22,19 @@ for exp in tests:
         expr = exp
         variables = None
         convert = None
-    variableStr = str(
-        variables) if variables is not None else "No Variable"
-    html += "<tr><td>" + format(
-        serial
-    ) + "</td><td>" + expr + "</td><td>" + variableStr + "</td>"
+    variableStr = str(variables) if variables is not None else "No Variable"
+    html += "<tr><td>" + format(serial) + "</td>"
+    html += "<td>" + format(expr) + "</td>"
+    html += "<td>" + variableStr + "</td>"
 
     try:
         converted = p.prescan(expr)
-        html += "<td>" + converted + "</td>"
+        html += "<td>" + format(converted) + "</td>"
     except Exception as e:
         html += "<td>" + str(e) + "</td>"
     try:
         postfix = p.convert(expr, variables)
-        html += "<td>" + postfix + "</td>"
+        html += "<td>" + format(postfix) + "</td>"
     except Exception as e:
         html += "<td>" + str(e) + "</td>"
     try:
@@ -52,7 +51,7 @@ for exp in tests:
         else:
             html += "<td>Failed</td>"
     except Exception as e:
-        html += "<td>"+str(e)+"</td><td>NA</td>"
+        html += "<td>" + str(e) + "</td><td>NA</td>"
 
     html += "</tr>"
     serial += 1
