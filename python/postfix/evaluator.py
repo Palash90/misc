@@ -10,8 +10,34 @@ def evaluate(postfix, variables):
     else:
         variables = default_variables
     stack=[]
-    operator =[]
     elements = postfix.split()
+
+    def check_postfix():
+        print()
+        print(postfix)
+        counter = 0
+        for element in elements:
+            if is_valid_operand(element, variables):
+                counter += 1
+                if counter < 0:
+                    break
+            elif element == ',' or element == "(" or element == ")":
+                handle_invalid_scenario("Invalid Postfix Notation: Contains ',' or '(' or ')'")
+            elif element in all_operators:
+                operator_definition = all_operators[element]
+                numOfOperand = operator_definition["argument"]
+                counter -= numOfOperand
+                if counter < 0:
+                    break    
+                counter += 1
+            else:
+                handle_invalid_scenario("Unknown Symbol in expression: " + element)
+        if counter < 0:
+            handle_invalid_scenario("Invalid Postfix Notation: Causes Stack Underflow")
+        elif counter != 1:
+            handle_invalid_scenario("Invalid Postfix Notation: Stack not 1")
+                
+        return True
 
 
     def handle_operation(operator):
@@ -29,14 +55,14 @@ def evaluate(postfix, variables):
             arguments.append(float(argument))
         result = perform_operation(operator, arguments)
         stack.append(result)
-        
+
+    check_postfix()
     for element in elements:
         if is_valid_operand(element, variables):
             stack.append(element)
         elif element == ',':
             handle_invalid_scenario("Invalid expression: contains comma")
         elif element in all_operators:
-            operator.append(element)
             handle_operation(element)
         else:
             handle_invalid_scenario("Unknown Symbol in expression: " + element)
