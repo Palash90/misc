@@ -8,7 +8,7 @@ class Postfix:
         try:
             return pre_scan(exp)
         except PostfixError as e:
-            return str(e)
+            raise e
 
     def convert(self, exp, variables=None):
         try:
@@ -19,7 +19,7 @@ class Postfix:
                 postfix = convert(prescanned, variables)
             return postfix
         except PostfixError as e:
-            return str(e)
+            raise e
 
     def evaluate(self, exp, variables=None):
         try:
@@ -27,4 +27,4 @@ class Postfix:
             result = evaluate(postfix, variables)
             return result
         except PostfixError as e:
-            return str(e)
+            raise e
