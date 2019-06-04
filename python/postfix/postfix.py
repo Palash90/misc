@@ -23,7 +23,7 @@ class Postfix:
 
     def evaluate(self, exp, variables=None):
         try:
-            postfix = convert(exp, variables)
+            postfix = self.convert(exp, variables)
             result = evaluate(postfix, variables)
             return result
         except Exception as e:
