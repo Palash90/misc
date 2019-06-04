@@ -92,7 +92,13 @@ tests = [
         "convert": False
     },
     "-2", "--2", "---2", "----2", "-----2", "++2",
-     "+++2", "++++2", "--++2", "++-2", "++++----2", "++++-----2"
+     "+++2", "++++2", "--++2", "++-2", "++++----2", "++++-----2",
+     "-(2*7*-7)*cos(---8)",
+     "-(2*7*-7)*cos(----8)",
+     "-(2*7*--7)*cos(--8)",
+     "-(2*7*---7)*cos(---8)",
+     "-(2*7*----7)*cos(----8)",
+     "-(2*7*-----7)*cos(----8)"
 
 ]
 html = '<html><body><table border="1px solid black"><thead style="background-color: lightgray"><td>Sl. No.</td><td>Original exprression</td><td>Variables</td><td>Prescanned exprression</td><td>Postfix exprression</td><td>Postfix Result</td><td>Eval Result</td><td>Status</td></thead>'
