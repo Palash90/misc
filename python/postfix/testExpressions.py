@@ -115,6 +115,23 @@ tests = [
             "y": 9
         },
         "convert": True
+    },
+     {
+        "exp": "atan(deg(acos(cos(rad(hypot(4, 3)))))+ y     *x^t)",
+        "variables": {
+            "t": 16,
+            "x": "2*4 - 3",
+            "y": 9
+        },
+        "convert": True
+    },
+     {
+        "exp": "hypot(x^2*4, y*t)",
+        "variables": {
+            "x": "2*4 - 3",
+            "y": "5*0.6",
+            "t": 6
+        },
+        "convert": True
     }
-
 ]

@@ -3,6 +3,7 @@ from all_operators import all_operators
 from handle_invalid_scenarios import handle_invalid_scenario
 from variables_operations import *
 from utils import is_valid_operand
+from converter import convert
 
 def evaluate(postfix, variables):
     if variables is not None:
@@ -48,9 +49,16 @@ def evaluate(postfix, variables):
             if argument in variables:
                 argument = variables[argument]
             check = is_int(argument) or is_float(argument)
-            if check == False:
+
+            if isinstance(argument, str):
+                convertedExp = convert(argument, None)
+                value = evaluate(convertedExp, None)
+            else:
+                value = argument
+            print(postfix, value)
+            if check == False and value is None:
                 handle_invalid_scenario("Value Error: invalid value passed: " + argument)
-            arguments.append(float(argument))
+            arguments.append(float(value))
         result = perform_operation(operator, arguments)
         stack.append(result)
 
