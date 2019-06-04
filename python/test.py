@@ -82,19 +82,16 @@ for exp in tests:
         converted = p.prescan(expr)
         html += "<td>" + converted + "</td>"
     except Exception as e:
-        print(e)
         html += "<td>" + str(e) + "</td>"
     try:
         postfix = p.convert(expr, variables)
         html += "<td>" + postfix + "</td>"
     except Exception as e:
-        print(e)
         html += "<td>" + str(e) + "</td>"
     try:
         result = p.evaluate(expr, variables)
         html += "<td>" + format(result) + "</td>"
     except Exception as e:
-        print(e)
         html += "<td>" + str(e) + "</td>"
     try:
         evalresult = eval(exp)
