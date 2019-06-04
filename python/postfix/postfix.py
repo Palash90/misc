@@ -21,9 +21,12 @@ class Postfix:
         except PostfixError as e:
             raise e
 
-    def evaluate(self, exp, variables=None):
+    def evaluate(self, exp, convert=True, variables=None):
         try:
-            postfix = self.convert(exp, variables)
+            if convert==True:
+                postfix = self.convert(exp, variables)
+            else:
+                postfix = exp
             result = evaluate(postfix, variables)
             return result
         except PostfixError as e:
