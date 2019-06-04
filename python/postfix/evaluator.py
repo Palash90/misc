@@ -13,8 +13,6 @@ def evaluate(postfix, variables):
     elements = postfix.split()
 
     def check_postfix():
-        print()
-        print(postfix)
         counter = 0
         for element in elements:
             if is_valid_operand(element, variables):
