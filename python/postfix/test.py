@@ -9,6 +9,8 @@ html = '<html><body><table border="1px solid black"><thead style="background-col
 
 serial = 1
 
+#tests = ["2.445*4-3.9*log(5, 10)"]
+
 for exp in tests:
     p = Postfix()
 

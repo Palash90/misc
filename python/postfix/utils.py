@@ -1,6 +1,9 @@
 def is_float(x):
     try:
-        a = float(x)
+        if isinstance(x, int) or isinstance(x, float) or isinstance(x, str):
+            a = float(x)
+        else:
+            return False
     except ValueError:
         return False
     else:
@@ -9,8 +12,11 @@ def is_float(x):
 
 def is_int(x):
     try:
-        a = float(x)
-        b = int(a)
+        if isinstance(x, int) or isinstance(x, float) or isinstance(x, str):
+            a = float(x)
+            b = int(a)
+        else:
+            return False
     except ValueError:
         return False
     else:

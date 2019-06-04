@@ -31,6 +31,7 @@ def evaluate(postfix, variables):
                 counter += 1
             else:
                 handle_invalid_scenario("Unknown Symbol in expression: " + element)
+            print(element, counter)
         if counter < 0:
             handle_invalid_scenario("Invalid Postfix Notation: Causes Stack Underflow")
         elif counter != 1:
@@ -39,23 +40,44 @@ def evaluate(postfix, variables):
         return True
 
 
+    def handle_expression(argument):
+        handle_invalid_scenario("Need to write code for recursive use case")
+        expr = argument.get("exp")
+        expVariables = argument.get("variables", None)
+        expConvert = argument.get("convert", None)
+        if expConvert is None or expConvert==True:
+            convertedExp = convert(expr, expVariables)
+        else:
+            if isinstance(argument, dict):
+                convertedExp = argument
+            else:
+                convertedExp = argument
+        value = evaluate(convertedExp, expVariables)
+        
+
+
     def handle_operation(operator):
         nonlocal stack
-        arguments = [];
+        arguments = []
         operator_definition = all_operators[operator]
         numOfOperand = operator_definition["argument"]
         for x in range(numOfOperand):
             argument  = stack.pop()
+
             if argument in variables:
                 argument = variables[argument]
-            check = is_int(argument) or is_float(argument)
-
-            if isinstance(argument, str):
+            if isinstance(argument, dict):
+                value =handle_expression(argument)
+            elif is_float(argument):
+                value = float(argument)
+            elif is_int(argument):
+                value = int(argument)
+            elif isinstance(argument, str):
                 convertedExp = convert(argument, None)
                 value = evaluate(convertedExp, None)
             else:
                 value = argument
-            print(postfix, value)
+            check = is_int(argument) or is_float(argument)
             if check == False and value is None:
                 handle_invalid_scenario("Value Error: invalid value passed: " + argument)
             arguments.append(float(value))
