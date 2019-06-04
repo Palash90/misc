@@ -57,7 +57,33 @@ tests = [
     "-(2*7*-7)*acosh(-8)",
     "hypot(4,3)",
     "deg(pi/3)",
-    "rad(60)"
+    "rad(60)",
+    {
+        "exp": "t y *",
+        "variables": {
+            "x": 1,
+            "t": 1,
+            "y": 1
+        },
+        "convert": False
+    },
+    {
+        "exp": "t y *",
+        "variables": {
+            "x": 1,
+            "y": 1
+        },
+        "convert": False
+    },
+    {
+        "exp": "3 t y *",
+        "variables": {
+            "t": 1,
+            "y": 1
+        },
+        "convert": False
+    }
+
 ]
 html = '<html><body><table border="1px solid black"><thead style="background-color: lightgray"><td>Sl. No.</td><td>Original exprression</td><td>Variables</td><td>Prescanned exprression</td><td>Postfix exprression</td><td>Postfix Result</td><td>Eval Result</td><td>Status</td></thead>'
 
@@ -67,11 +93,13 @@ for exp in tests:
     p = Postfix()
 
     if isinstance(exp, dict):
-        expr = exp["exp"]
-        variables = exp["variables"]
+        expr = exp.get("exp")
+        variables = exp.get("variables", None)
+        convert = exp.get("convert", None)
     else:
         expr = exp
         variables = None
+        convert = None
     variableStr = str(
         variables) if variables is not None else "No Variable"
     html += "<tr><td>" + format(
@@ -89,7 +117,7 @@ for exp in tests:
     except Exception as e:
         html += "<td>" + str(e) + "</td>"
     try:
-        result = p.evaluate(expr, variables)
+        result = p.evaluate(expr, convert, variables)
         html += "<td>" + format(result) + "</td>"
     except Exception as e:
         html += "<td>" + str(e) + "</td>"
