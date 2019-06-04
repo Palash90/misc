@@ -79,7 +79,7 @@ for exp in tests:
         serial
     ) + "</td><td>" + expr + "</td><td>" + variableStr + "</td><td>" + converted + "</td><td>" + postfix + "</td>"
     try:
-        result = p.evaluate(converted, variables)
+        result = p.evaluate(expr, variables)
         html += "<td>" + format(result) + "</td><td>" + format(
             eval(exp)) + "</td>"
         if result == eval(expr):
