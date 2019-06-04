@@ -1,7 +1,7 @@
-from .prescan import pre_scan
-from .converter import convert
-from .evaluator import evaluate
-from .handle_invalid_scenarios import PostfixError
+from prescan import pre_scan
+from converter import convert
+from evaluator import evaluate
+from handle_invalid_scenarios import PostfixError
 
 class Postfix:
     def prescan(self, exp):

@@ -1,8 +1,8 @@
 # A python utility to evaluate an Infix expression.
-from .all_operators import all_operators
-from .handle_invalid_scenarios import handle_invalid_scenario
-from .variables_operations import *
-from .utils import is_valid_operand
+from all_operators import all_operators
+from handle_invalid_scenarios import handle_invalid_scenario
+from variables_operations import *
+from utils import is_valid_operand
 
 def evaluate(postfix, variables):
     if variables is not None:

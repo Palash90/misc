@@ -1,6 +1,6 @@
 from math import *
-from .utils import *
-from .handle_invalid_scenarios import handle_invalid_scenario
+from utils import *
+from handle_invalid_scenarios import handle_invalid_scenario
 default_variables = {"pi": pi, "e": e, "tau": 2 * pi}
 
 

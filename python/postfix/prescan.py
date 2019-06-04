@@ -1,6 +1,6 @@
 #Prescan the expression to correctly identify the negation and subtraction
-from .all_operators import all_operators
-from .handle_invalid_scenarios import handle_invalid_scenario
+from all_operators import all_operators
+from handle_invalid_scenarios import handle_invalid_scenario
 
 
 def pre_scan(exp):
