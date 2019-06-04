@@ -113,14 +113,7 @@ tests = [
     }, {
         "exp": "hypot(x+y*t,x*y)",
         "variables": {
-            "x": {
-                "exp": "x+y+t",
-                "variables": {
-                    "x": 2,
-                    "y": 4,
-                    "t": 3
-                }
-            },
+            "x": "6",
             "y": "5*0.6",
             "t": 6
         },
@@ -128,14 +121,7 @@ tests = [
     }, {
         "exp": "hypot(x+y*t,x*y)",
         "variables": {
-            "x": {
-                "exp": "x+y+t",
-                "variables": {
-                    "x": 2,
-                    "y": "2*2",
-                    "t": 3
-                }
-            },
+            "x": "4",
             "y": "5*0.6",
             "t": 6
         },
@@ -143,20 +129,55 @@ tests = [
     }, {
         "exp": "hypot(x+y*t,x*y)",
         "variables": {
-            "x": {
-                "exp": "x+y+t",
+            "x": "5*5",
+            "y": {
+                "exp": "a + b",
                 "variables": {
-                    "x": 2,
-                    "y": {
-                        "exp": "2 9 *",
-                        "convert": False
+                    "a": 9,
+                    "b": 10
+                }
+            },
+            "t": 6
+        },
+        "convert": True
+    }, {
+        "exp": "x*y + z^2",
+        "variables": {
+            "x": 2,
+            "y": {
+                "exp": "x + y",
+                "variables": {
+                    "x": {
+                        "exp": "2*y",
+                        "variables": {
+                            "y": 1
+                        }
                     },
-                    "t": 3
+                    "y": {
+                        "exp": "2*x",
+                        "variables": {
+                            "x": {
+                                "exp": "(sin(theta))^2 + (cos(theta))^2",
+                                "variables": {
+                                    "theta": {
+                                        "exp": "log(9*y) - 2*cos(z)+ln(e^2)",
+                                        "variables": {
+                                            "y": {
+                                                "exp": "x",
+                                                "variables": {
+                                                    "x": 5
+                                                }
+                                            },
+                                            "z": "e"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             },
-            "y": "5*0.6",
-            "t": 6
-        },
-        "convert": True
+            "z": "5*0.5"
+        }
     }
 ]

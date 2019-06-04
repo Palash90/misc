@@ -31,9 +31,8 @@ def evaluate(postfix, variables):
                 counter += 1
             else:
                 handle_invalid_scenario("Unknown Symbol in expression: " + element)
-            print(element, counter)
         if counter < 0:
-            handle_invalid_scenario("Invalid Postfix Notation: Causes Stack Underflow")
+            handle_invalid_scenario("Invalid Postfix Notation: Causes Stack Underflow - " + postfix)
         elif counter != 1:
             handle_invalid_scenario("Invalid Postfix Notation: Stack not 1")
                 
@@ -41,18 +40,19 @@ def evaluate(postfix, variables):
 
 
     def handle_expression(argument):
-        handle_invalid_scenario("Need to write code for recursive use case")
         expr = argument.get("exp")
         expVariables = argument.get("variables", None)
         expConvert = argument.get("convert", None)
-        if expConvert is None or expConvert==True:
-            convertedExp = convert(expr, expVariables)
+        if isinstance(expr, dict):
+            return handle_expression(expr)
         else:
-            if isinstance(argument, dict):
-                convertedExp = argument
+            if expConvert is None or expConvert==True:
+                convertedExp = convert(expr, expVariables)
+                value = evaluate(convertedExp, expVariables)
             else:
-                convertedExp = argument
-        value = evaluate(convertedExp, expVariables)
+                value = evaluate(expr, expVariables)
+                
+        return value
         
 
 
@@ -96,8 +96,10 @@ def evaluate(postfix, variables):
             handle_invalid_scenario("Unknown Symbol in expression: " + element)
     
     result = stack[0]
-       
-    if is_int(stack[0]):
-        return int(stack[0])
+    
+    if isinstance(result, str):
+        return variables[result]
+    if is_int(result):
+        return int(result)
     else:
-        return float(stack[0])
+        return float(result)
