@@ -1,13 +1,13 @@
 from .prescan import pre_scan
 from .converter import convert
 from .evaluator import evaluate
-
+from .handle_invalid_scenarios import PostfixError
 
 class Postfix:
     def prescan(self, exp):
         try:
             return pre_scan(exp)
-        except Exception as e:
+        except PostfixError as e:
             return str(e)
 
     def convert(self, exp, variables=None):
@@ -18,7 +18,7 @@ class Postfix:
             else:
                 postfix = convert(prescanned, variables)
             return postfix
-        except Exception as e:
+        except PostfixError as e:
             return str(e)
 
     def evaluate(self, exp, variables=None):
@@ -26,5 +26,5 @@ class Postfix:
             postfix = self.convert(exp, variables)
             result = evaluate(postfix, variables)
             return result
-        except Exception as e:
+        except PostfixError as e:
             return str(e)
