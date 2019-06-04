@@ -106,7 +106,7 @@ for exp in tests:
             html += "<td>Failed</td>"
     except Exception as e:
         print(e)
-        html += "<td>Evaluation Failed</td><td>NA</td>"
+        html += "<td>"+str(e)+"</td><td>NA</td>"
 
     html += "</tr>"
     serial += 1
