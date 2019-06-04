@@ -49,7 +49,7 @@ def evaluate(postfix, variables):
                 argument = variables[argument]
             check = is_int(argument) or is_float(argument)
             if check == False:
-                handle_invalid_scenario("Value Error: invalid value passed", argument)
+                handle_invalid_scenario("Value Error: invalid value passed" + argument)
             arguments.append(float(argument))
         result = perform_operation(operator, arguments)
         stack.append(result)
