@@ -2,7 +2,7 @@ from postfix.postfix import Postfix
 from math import *
 import sys
 
-#Call the infix to postfix converter to convert the exprression
+# Call the infix to postfix converter to convert the exprression
 tests = [
     "-", "-2", "-9*-4", "-2--7", "2+-7", "-(2*7*-7)-8", "-(2*7*-7)*-8",
     "-(2*7*-7)*(-8)", "-(2*7*-7)*cos(-8)", "-(2*7*(-7))*cos(-8)",
@@ -72,24 +72,42 @@ for exp in tests:
     else:
         expr = exp
         variables = None
-    converted = p.prescan(expr)
-    postfix = p.convert(expr, variables)
-    variableStr = str(variables) if variables is not None else "No Variable"
+    variableStr = str(
+        variables) if variables is not None else "No Variable"
     html += "<tr><td>" + format(
         serial
-    ) + "</td><td>" + expr + "</td><td>" + variableStr + "</td><td>" + converted + "</td><td>" + postfix + "</td>"
+    ) + "</td><td>" + expr + "</td><td>" + variableStr + "</td>"
+
+    try:
+        converted = p.prescan(expr)
+        html += "<td>" + converted + "</td>"
+    except Exception as e:
+        print(e)
+        html += "<td>" + str(e) + "</td>"
+    try:
+        postfix = p.convert(expr, variables)
+        html += "<td>" + postfix + "</td>"
+    except Exception as e:
+        print(e)
+        html += "<td>" + str(e) + "</td>"
     try:
         result = p.evaluate(expr, variables)
-        html += "<td>" + format(result) + "</td><td>" + format(
-            eval(exp)) + "</td>"
-        if result == eval(expr):
+        html += "<td>" + format(result) + "</td>"
+    except Exception as e:
+        print(e)
+        html += "<td>" + str(e) + "</td>"
+    try:
+        evalresult = eval(exp)
+        html += "<td>" + format(eval(exp)) + "</td>"
+
+        if result == evalresult:
             html += "<td>Passed</td>"
         else:
             html += "<td>Failed</td>"
-    except:
-        print(result)
-        html += "<td>" + format(
-            result) + "</td><td>NA</td><td>Evaluation failed</td>"
+    except Exception as e:
+        print(e)
+        html += "<td>Evaluation Failed</td><td>NA</td>"
+
     html += "</tr>"
     serial += 1
 
