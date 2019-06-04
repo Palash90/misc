@@ -87,7 +87,16 @@ def evaluate(postfix, variables):
     check_postfix()
     for element in elements:
         if is_valid_operand(element, variables):
-            stack.append(element)
+            if element in variables:
+                value  = variables[element]
+                if isinstance(value, dict):
+                    value = handle_expression(value)
+            elif is_int(element):
+                value = int(element)
+            elif is_float(element):
+                value = float(element)
+            
+            stack.append(value)
         elif element == ',':
             handle_invalid_scenario("Invalid expression: contains comma")
         elif element in all_operators:
