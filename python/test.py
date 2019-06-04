@@ -82,6 +82,14 @@ tests = [
             "y": 1
         },
         "convert": False
+    },
+    {
+        "exp": " y     *",
+        "variables": {
+            "t": 1,
+            "y": 1
+        },
+        "convert": False
     }
 
 ]
