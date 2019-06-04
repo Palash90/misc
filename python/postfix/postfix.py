@@ -23,7 +23,7 @@ class Postfix:
 
     def evaluate(self, exp, convert=True, variables=None):
         try:
-            if convert==True:
+            if convert is None or convert==True:
                 postfix = self.convert(exp, variables)
             else:
                 postfix = exp
