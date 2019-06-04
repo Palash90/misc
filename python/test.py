@@ -98,14 +98,13 @@ for exp in tests:
         html += "<td>" + str(e) + "</td>"
     try:
         evalresult = eval(exp)
-        html += "<td>" + format(eval(exp)) + "</td>"
+        html += "<td>" + format(evalresult) + "</td>"
 
         if result == evalresult:
             html += "<td>Passed</td>"
         else:
             html += "<td>Failed</td>"
     except Exception as e:
-        print(e)
         html += "<td>"+str(e)+"</td><td>NA</td>"
 
     html += "</tr>"
