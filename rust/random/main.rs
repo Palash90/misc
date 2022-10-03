@@ -1,33 +1,33 @@
 fn main(){
-    let s = String::from("Hi");
+	let s = String::from("Hi");
 
-    let mut s=random(s);
-    change_string(&mut s);
+	let mut s=random(s);
+	change_string(&mut s);
 
-    print(&s);
+	print(&s);
 
-    // Why the following is throws error but not the above one?
+	// Why the following is throws error but not the above one?
 
-    let d=&mut s;
-    change_string(d);
+	let d=&mut s;
+	change_string(d);
 
-    let f = &s;
+	let f = &s;
 
-    print(f);
-    //  print(d);
-    //  change_string(d);
+	print(f);
+	//  print(d);
+	//  change_string(d);
 }
 
 fn random(mut s: String)->String{
-    s.push_str("rando");
-    print(&s);
-    s
+	s.push_str("rando");
+	print(&s);
+	s
 }
 
 fn change_string(s : &mut String) {
-    s.push_str("Hello");
+	s.push_str("Hello");
 }
 
 fn print(s: &String){
-    println!("{s}");
+	println!("{s}");
 }
