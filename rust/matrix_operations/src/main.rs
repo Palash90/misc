@@ -5,7 +5,7 @@ fn main() {
 
     fill(&mut matrix1, 0);
     fill(&mut matrix2, 9);
-   
+
     println!("First Matrix");
     print(matrix1);
     println!("Second Matrix");
@@ -13,7 +13,7 @@ fn main() {
 
     for i in 0..3{
         for j in 0..3{
-           matrix3[i as usize][j as usize] =  matrix1[i as usize][j as usize] + matrix2[i as usize][j as usize];   
+            matrix3[i as usize][j as usize] =  matrix1[i as usize][j as usize] + matrix2[i as usize][j as usize];   
         }
     }
 
@@ -24,7 +24,7 @@ fn main() {
 fn fill(matrix:&mut [[i32;3];3], offset:i32){
     for i in 0..3{
         for j in 0..3{
-           matrix[i as usize][j as usize] = i * 3 + j + offset; 
+            matrix[i as usize][j as usize] = i * 3 + j + offset; 
         }
     }
 }

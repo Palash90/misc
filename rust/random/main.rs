@@ -6,13 +6,15 @@ fn main(){
 
     print(&s);
     
-    // Why the following is possible?
+    // Why the following is throws error but not the above one?
 
-    let d=&s;    
+    let d=&mut s;
+    change_string(d);
+
     let f = &s;
 
     print(f);
-    print(d);
+  //  print(d);
   //  change_string(d);
 }
 
