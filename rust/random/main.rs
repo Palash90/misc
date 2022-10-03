@@ -5,7 +5,7 @@ fn main(){
     change_string(&mut s);
 
     print(&s);
-    
+
     // Why the following is throws error but not the above one?
 
     let d=&mut s;
@@ -14,8 +14,8 @@ fn main(){
     let f = &s;
 
     print(f);
-  //  print(d);
-  //  change_string(d);
+    //  print(d);
+    //  change_string(d);
 }
 
 fn random(mut s: String)->String{
