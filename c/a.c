@@ -4,6 +4,7 @@
 int main(){
     int *c = get_pointer();
 
+    printf("%ld", c);
     printf("%d", *(c));
 }
 
