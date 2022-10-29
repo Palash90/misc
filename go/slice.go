@@ -8,8 +8,8 @@ import (
 func main() {
     var s []int = make([]int, 3)
     var input string
-    fmt.Println("Initial slice",s)
     k := 0
+    fmt.Println("Initial slice",s)
     fmt.Println("Type an interger(X to exit):")
     for {
         fmt.Scanln(&input) 
@@ -21,15 +21,20 @@ func main() {
             fmt.Println("Wrong input")
             continue
         }
-        if k<=2{
+        if k<3 {
             s[k] = ap
         }else{
             s = append(s, ap)
         }
         k++
-        fmt.Println("After insertion", s, "length of slice is", len(s))
-        for i:=0; i<len(s);i++{
-            for j:=0;j<len(s);j++{
+        sortLength := 0
+        if k<3{
+            sortLength = k
+        }else {
+            sortLength = len(s)
+        }
+        for i:=0; i<sortLength;i++{
+            for j:=0;j<sortLength;j++{
                 if s[i] < s[j] {
                     temp := s[i]
                     s[i] = s[j]
