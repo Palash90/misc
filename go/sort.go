@@ -3,18 +3,18 @@ package main
 import "fmt"
 import "sort"
 
-func my_sort(arr [2]int, routineIndex int, c chan []int){
+func my_sort(arr [3]int, routineIndex int, c chan []int){
     fmt.Println("Input array to routine", routineIndex, arr)
     sort.Ints(arr[:])
     fmt.Println("Sending sorted array on channel", arr, "from routine", routineIndex)
     c <- arr[:]
 }
 func main(){
-    var numbers [8]int
+    var numbers [12]int
     c := make(chan []int)
     final := make([]int, 0)
 
-    fmt.Println("Enter 8 integer numbers")
+    fmt.Println("Enter 12 integer numbers")
 
     fmt.Scan(&numbers[0])
     fmt.Scan(&numbers[1])
@@ -24,16 +24,20 @@ func main(){
     fmt.Scan(&numbers[5])
     fmt.Scan(&numbers[6])
     fmt.Scan(&numbers[7])
+    fmt.Scan(&numbers[8])
+    fmt.Scan(&numbers[9])
+    fmt.Scan(&numbers[10])
+    fmt.Scan(&numbers[11])
 
     fmt.Println("Input Numbers", numbers)
     fmt.Println()
 
-    var arr0, arr1, arr2, arr3 [2]int
+    var arr0, arr1, arr2, arr3 [3]int
 
-    copy(arr0[:], numbers[:2])
-    copy(arr1[:], numbers[2:4])
-    copy(arr2[:], numbers[4:6])
-    copy(arr3[:], numbers[6:8])
+    copy(arr0[:], numbers[:3])
+    copy(arr1[:], numbers[3:6])
+    copy(arr2[:], numbers[6:9])
+    copy(arr3[:], numbers[9:12])
 
     go my_sort(arr0, 0, c)
     go my_sort(arr1, 1, c)
@@ -51,12 +55,16 @@ func main(){
 
     final =    append(final, w[0])
     final =    append(final, w[1])
+    final =    append(final, w[2])
     final =    append(final, x[0])
     final =    append(final, x[1])
+    final =    append(final, x[2])
     final =    append(final, y[0])
     final =    append(final, y[1])
+    final =    append(final, y[2])
     final =    append(final, z[0])
     final =    append(final, z[1])
+    final =    append(final, z[2])
 
     sort.Ints(final)
 
