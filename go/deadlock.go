@@ -30,9 +30,14 @@ func main() {
     ch2 := make (chan int)
     wg.Add(3)
 
-    go     sendReceive(ch1, ch2, 1, "ch1", "ch2")
-    go    sendReceive(ch2, ch1, 2, "ch2", "ch1")
-    go normalThread()
+    go sendReceive(ch1, ch2, 1, "ch1", "ch2")
+    go sendReceive(ch2, ch1, 2, "ch2", "ch1")
+
+    // If you comment the following line, the program will error out due to deadlock
+    // If you uncomment the following line, only the following go routine will run indefinitely
+    // Cause go cannot detect deadlock if there is one go routine that is not under deadlock
+
+    // go normalThread()
 
     wg.Wait()
     fmt.Println("Main completed")
