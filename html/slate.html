@@ -1,0 +1,68 @@
+<html>
+    <head>
+        <title>Slate</title>
+        <style>
+.mainDiv {
+    border: 5px outset black;
+    background-color:white ;
+    text-align: center;
+}
+.mainDiv .child {
+    display: inline-block;
+    margin-right: 2px;
+    background-color: gray;
+    margin-bottom: 20px;
+    padding: 0 10px
+}
+.white {
+    border: 5px outset black;
+    background-color:white;
+    height: 10px;
+    width:10px;
+}
+
+.black {
+    border: 5px outset black;
+    background-color:black;
+    height: 10px;
+    width:10px;
+}
+        </style>
+        <script type="text/javascript">
+            function changeSlate() {
+                var div = document.getElementById("mainDiv");
+
+                div.replaceChildren();
+
+                var height = window.innerHeight*95/100;
+                var width=window.innerWidth*98/100;
+
+                div.style.height=height;
+                div.style.width=width;
+
+                var d=document.createElement("div");
+
+                console.log(d)
+
+                for (var i=1; i<=height; i++)
+                {
+                    for (var j=1; j<=width; j++)
+                    {
+                        console.log("Nested For")
+                        if((i+j)%2==0){
+                            d.className="black";
+                        } else {
+                            d.className="white";
+                        }
+                        div.appendChild(d);
+                    }
+                }
+            }
+        </script>
+    </head>
+    <body onresize="changeSlate()" onload="changeSlate()">
+        <div class="mainDiv" id="mainDiv">
+
+        </div>
+    </body>
+</html>
