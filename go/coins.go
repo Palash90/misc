@@ -2,6 +2,27 @@ package main
 
 import "fmt"
 
+func getDifferentDenominations(n int) {
+    num := 0
+    for n>0 {
+        if n>= 419 {
+            fmt.Println("419")
+            n = n - 419
+        } else if n>= 408 {
+            fmt.Println("408")
+            n = n - 408
+        } else if n >= 186 {
+            fmt.Println("186")
+            n = n -186
+        } else {
+            fmt.Println("83")
+            n = n - 83
+        }
+        num++
+    }
+    fmt.Println(n, num)
+}
+
 func getNumOfCoins(n int) int{
     num := 0
     //    fmt.Println()
@@ -57,6 +78,8 @@ func coinsCalc(n int, denominations []int) int {
 func main(){
     var n int
     fmt.Scan(&n)
+    getDifferentDenominations(n)
+    /*
     for i:=0; i<n; i++{
 
         //        coins := getNumOfCoins(i)
@@ -69,4 +92,5 @@ func main(){
         //        fmt.Println(i, coins_c)
     }
     fmt.Println("New Algorithm Works")
+    */
 }
