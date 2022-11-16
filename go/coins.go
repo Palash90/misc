@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-func getDifferentDenominations(n int) {
+/*func getDifferentDenominations(n int) {
     num := 0
     for n>0 {
         if n>= 419 {
@@ -22,6 +22,7 @@ func getDifferentDenominations(n int) {
     }
     fmt.Println(n, num)
 }
+
 
 func getNumOfCoins(n int) int{
     num := 0
@@ -64,6 +65,7 @@ func getNumOfCoins(n int) int{
     //    fmt.Println()
     return num
 }
+*/
 
 func coinsCalc(n int, denominations []int) int {
     numOfCoins := 0
@@ -78,19 +80,18 @@ func coinsCalc(n int, denominations []int) int {
 func main(){
     var n int
     fmt.Scan(&n)
-    getDifferentDenominations(n)
-    /*
-    for i:=0; i<n; i++{
+    //    getDifferentDenominations(n)
+    //    for i:=0; i<n; i++{
 
-        //        coins := getNumOfCoins(i)
-        coinsCalc(i, []int{2000,500,200,100,50,20,10,5, 2,1})
+    //  coins := getNumOfCoins(i)
+    fmt.Println( coinsCalc(n, []int{10, 5, 1}))
 
-        //        if coins != coins_c{
-        //            fmt.Println("Broke for", i)
-        //            break;
-        //        }
-        //        fmt.Println(i, coins_c)
-    }
-    fmt.Println("New Algorithm Works")
-    */
+    //        if coins != coins_c{
+    //            fmt.Println("Broke for", i)
+    //            break;
+    //        }
+    //        fmt.Println(i, coins_c)
+    //    }
+    // fmt.Println("New Algorithm Works")
+
 }
