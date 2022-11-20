@@ -22,7 +22,9 @@ var merge = function(nums1, nums2) {
     while(true){
         if(i === nums1.length && j==nums2.length){
             break;
-        } else if(i === nums1.length) {
+        } 
+
+        if(i === nums1.length) {
             takeFromSecond()
         } else if(j === nums2.length) {
             takeFromFirst()
