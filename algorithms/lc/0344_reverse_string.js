@@ -12,8 +12,9 @@ var reverseString = function(s) {
 };
 
 console.log(reverseString(["h", "e","l","l","0"]))
+console.log(reverseString(["h"]))
 console.log(reverseString(["h", "a","n","n","a", "h"]))
 console.log(reverseString(["p", "a","l","a","s", "h"]))
-
+console.log(reverseString("palash"));
 
 
