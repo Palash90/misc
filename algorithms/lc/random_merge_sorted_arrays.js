@@ -8,22 +8,29 @@ var merge = function(nums1, nums2) {
     var i= j = k = 0
     var result = []
 
+    var takeFromSecond = () =>     {
+        result[k] = nums2[j]
+        j++
+
+    }
+
+    var takeFromFirst = () => {
+        result[k] = nums1[i]
+        i++
+    }
+
     while(true){
         if(i === nums1.length && j==nums2.length){
             break;
         } else if(i === nums1.length) {
-            result[k] = nums2[j]
-            j++
+            takeFromSecond()
         } else if(j === nums2.length) {
-            result[k] = nums1[i]
-            i++
+            takeFromFirst()
         } else {
             if(nums1[i]<nums2[j]){
-                result[k] = nums1[i]
-                i++
+                takeFromFirst()
             } else {
-                result[k] = nums2[j]
-                j++
+                takeFromSecond()
             }
         }
         k++
