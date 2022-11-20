@@ -20,25 +20,7 @@ var moveZeroes = function(arr) {
     return arr
 }
 
-const moveZeroes2 = (arr) => {
-    var lastZeroIndex = -1;
-    for(var i = 0; i<arr.length; i++){
-        if(arr[i] === 0){
-            lastZeroIndex = i
-        } else {
-            if(lastZeroIndex != -1){
-                var temp = arr[i]
-                arr[lastZeroIndex] = arr[lastZeroIndex]
-                arr[i] = arr[lastZeroIndex]
-            }
-        }
-    }
-
-    return arr
-}
 
 var arr = [0,0,1,2,0,5,6,7,0]
 console.log(arr, moveZeroes(arr))
-arr = [0,0,1,2,0,5,6,7,0]
-console.log(arr, moveZeroes2(arr))
 
