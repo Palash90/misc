@@ -39,5 +39,6 @@ const moveZeroes2 = (arr) => {
 
 var arr = [0,0,1,2,0,5,6,7,0]
 console.log(arr, moveZeroes(arr))
+arr = [0,0,1,2,0,5,6,7,0]
 console.log(arr, moveZeroes2(arr))
 
