@@ -80,6 +80,7 @@ class LinkedList {
     reverse(){
         var prev = null;
         var curr = this.head;
+        this.tail = this.head
         while (curr) {
             var temp = curr.next;
             curr.next = prev;
@@ -140,6 +141,10 @@ myLinkedList.traverse()
 
 console.log()
 myLinkedList.reverse()
+myLinkedList.traverse()
+
+myLinkedList.append(56);
+console.log("After appending 56")
 myLinkedList.traverse()
 
 myLinkedList.reverse()
