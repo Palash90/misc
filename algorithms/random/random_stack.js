@@ -118,14 +118,18 @@ class Stack {
 
 
 var stack = new Stack(10)
+console.log(stack.peek())
 stack.traverse()
 
 stack.push(15)
+console.log(stack.peek())
 stack.traverse()
 
 stack.push(20)
+console.log(stack.peek())
 stack.traverse()
 
 stack.pop()
+console.log(stack.peek())
 stack.traverse()
 
