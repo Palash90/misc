@@ -1,9 +1,8 @@
-// add a method prepend() to the linked list that adds a node to the beginning of the list
-
 class Node {
     constructor(value){
         this.value = value
         this.next = null
+        this.prev = null
     }
 }
 
@@ -17,6 +16,7 @@ class LinkedList {
     append(value) {
         const newNode = new Node(value)
         this.tail.next = newNode;
+        newNode.prev = this.tail
         this.tail = newNode;
         this.length++;
     }
@@ -24,6 +24,8 @@ class LinkedList {
     prepend(value) {
         const newNode = new Node(value)
         newNode.next = this.head
+        newNode.prev = null
+        this.head.prev = newNode
         this.head = newNode
         this.length++;
     }
@@ -37,13 +39,25 @@ class LinkedList {
         var newNode = new Node(value)
         var currentNode = this._getNode(index-1)
         newNode.next = currentNode.next
+        newNode.prev = currentNode
+        newNode.next.prev = newNode
+
         currentNode.next = newNode
         this.length++
     }
 
     remove(index){
         var previousNode = this._getNode(index - 1)
-        previousNode.next = previousNode.next===null?null:previousNode.next.next 
+        var nodeToBeDeleted = previousNode.next
+
+        if(nodeToBeDeleted && nodeToBeDeleted.next){
+            nodeToBeDeleted.next.prev = previousNode
+            previousNode.next = nodeToBeDeleted.next
+        } else {
+            this.tail = previousNode
+            previousNode.next = null
+        }
+
         this.length--
     }
 
@@ -77,18 +91,15 @@ class LinkedList {
         console.log()
     }
 
-    reverse(){
-        var prev = null;
-        var curr = this.head;
-        while (curr) {
-            var temp = curr.next;
-            curr.next = prev;
-            prev = curr;
-            curr = temp;
-            if(curr){
-                this.head = curr
-            }
+    traverseBackWords(){
+        var currentNode = this.tail
+        var path = ""
+        while(currentNode){
+            path+= currentNode.value + "--->"
+            currentNode = currentNode.prev
         }
+        console.log(path)
+        console.log()
     }
 }
 
@@ -104,29 +115,50 @@ myLinkedList.append(16);
 console.log("After appending 16")
 myLinkedList.traverse()
 
+console.log("Backword traversal")
+myLinkedList.traverseBackWords()
+
 myLinkedList.prepend(1)
 console.log("After prepending 1")
 myLinkedList.traverse()
+
+console.log("Backword traversal")
+myLinkedList.traverseBackWords()
 
 myLinkedList.prepend(12)
 console.log("After prepending 12")
 myLinkedList.traverse()
 
+console.log("Backword traversal")
+myLinkedList.traverseBackWords()
+
 myLinkedList.insert(2, 53)
 console.log("After insert at index 2")
 myLinkedList.traverse()
+
+console.log("Backword traversal")
+myLinkedList.traverseBackWords()
 
 myLinkedList.append(26);
 console.log("After appending 26")
 myLinkedList.traverse()
 
+console.log("Backword traversal")
+myLinkedList.traverseBackWords()
+
 myLinkedList.prepend(9)
 console.log("After prepending 9")
 myLinkedList.traverse()
 
+console.log("Backword traversal")
+myLinkedList.traverseBackWords()
+
 myLinkedList.insert(8, 82)
 console.log("After insert at index 8")
 myLinkedList.traverse()
+
+console.log("Backword traversal")
+myLinkedList.traverseBackWords()
 
 console.log("Value at index 8 is", myLinkedList.get(8))
 
@@ -134,13 +166,13 @@ myLinkedList.remove(8)
 console.log("After deleting node at index 8")
 myLinkedList.traverse()
 
+console.log("Backword traversal")
+myLinkedList.traverseBackWords()
+
 myLinkedList.remove(5)
 console.log("After deleting node at index 5")
 myLinkedList.traverse()
 
-console.log()
-myLinkedList.reverse()
-myLinkedList.traverse()
+console.log("Backword traversal")
+myLinkedList.traverseBackWords()
 
-myLinkedList.reverse()
-myLinkedList.traverse()
