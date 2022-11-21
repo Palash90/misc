@@ -133,3 +133,6 @@ stack.pop()
 console.log(stack.peek())
 stack.traverse()
 
+stack.pop()
+stack.pop()
+stack.pop()
