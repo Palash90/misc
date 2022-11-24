@@ -39,7 +39,31 @@ class BinarySearchTree {
         }
     }
     lookup(value){
-        //Code here
+        if(!this.root){
+            return null
+        }
+
+        var current = this.root
+
+        while(true){
+            if(value < current.value){
+                if(current.left === null){
+                    return null
+                }
+                current = current.left
+            }
+
+            if(value > current.value) {
+                if(current.right === null){
+                    return null
+                }
+                current = current.right
+            }
+
+            if(value === current.value){
+                return current
+            }
+        }
     }
     // remove
 }
@@ -51,9 +75,16 @@ tree.insert(4)
 tree.insert(6)
 tree.insert(20)
 tree.insert(170)
+tree.insert(9)
 tree.insert(15)
 tree.insert(1)
 console.log(JSON.stringify(traverse(tree.root), null, 4))
+console.log()
+console.log("Look up", 15)
+console.log(JSON.stringify(tree.lookup(15), null, 4))
+console.log("Look up", 9)
+console.log(JSON.stringify(tree.lookup(9), null, 4))
+
 
 //     9
 //  4     20
