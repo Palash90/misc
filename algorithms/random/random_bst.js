@@ -27,7 +27,7 @@ class BinarySearchTree {
                 }
             }
 
-            if(value > current.value){
+            if(value >= current.value){
                 if(current.right === null){
                     current.right = new Node(value)
                     break
@@ -45,6 +45,7 @@ class BinarySearchTree {
 }
 
 const tree = new BinarySearchTree();
+tree.insert(9)
 tree.insert(9)
 tree.insert(4)
 tree.insert(6)
