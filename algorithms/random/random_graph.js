@@ -6,21 +6,13 @@ class Graph {
     } 
     addVertex(node)  { 
         if(!this.adjacencyList[node]){
-            this.adjacencyList[node] = null
+            this.adjacencyList[node] =[] 
         }
         this.numberOfNodes++
     } 
     addEdge(node1, node2) { 
-        if(this.adjacencyList[node1]){
-            this.adjacencyList[node1].push(node2)
-        } else {
-            this.adjacencyList[node1] = [node2]
-        }
-        if(this.adjacencyList[node2]){
-            this.adjacencyList[node2].push(node1)
-        } else {
-            this.adjacencyList[node2] = [node1]
-        }
+        this.adjacencyList[node1].push(node2)
+        this.adjacencyList[node2].push(node1)
     } 
     showConnections() { 
         const allNodes = Object.keys(this.adjacencyList); 
