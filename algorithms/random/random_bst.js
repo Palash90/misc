@@ -11,19 +11,17 @@ class BinarySearchTree {
         this.root = null;
     }
     insert(value){
-        var inserted = false;
         if(this.root === null){
             this.root = new Node(value)
-            inserted = true
             return
         }
 
         var current = this.root
-        while(!inserted){
+        while(true){
             if(value<current.value){
                 if(current.left === null){
                     current.left = new Node(value)
-                    inserted = true
+                    break 
                 } else {
                     current = current.left
                 }
@@ -32,7 +30,7 @@ class BinarySearchTree {
             if(value > current.value){
                 if(current.right === null){
                     current.right = new Node(value)
-                    inserted = true
+                    break
                 } else {
                     current = current.right
                 }
