@@ -46,6 +46,7 @@ class BinarySearchTree {
         var current = this.root
 
         while(true){
+            console.log("Looking up node with value", current.value)
             if(value < current.value){
                 if(current.left === null){
                     return null
