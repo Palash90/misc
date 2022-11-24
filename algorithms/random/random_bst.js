@@ -84,6 +84,9 @@ console.log("Look up", 15)
 console.log(JSON.stringify(tree.lookup(15), null, 4))
 console.log("Look up", 9)
 console.log(JSON.stringify(tree.lookup(9), null, 4))
+console.log("Look up", 900)
+console.log(JSON.stringify(tree.lookup(900), null, 4))
+
 
 
 //     9
