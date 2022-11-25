@@ -3,3 +3,6 @@
 2. forEach does not allow break statement, Try to iterate through for loop
 
 3. Object.keys() can either be O(n) or O(nlogn). Most cases it is O(n)
+
+    4. Remember to return value from functions
+
