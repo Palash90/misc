@@ -1,3 +1,3 @@
 1. forEach does not work on strings. Try to iterate through for loop
 
-
+2. forEach does not allow break statement, Try to iterate through for loop
