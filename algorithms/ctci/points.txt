@@ -1,3 +1,5 @@
 1. forEach does not work on strings. Try to iterate through for loop
 
 2. forEach does not allow break statement, Try to iterate through for loop
+
+3. Object.keys() can either be O(n) or O(nlogn). Most cases it is O(n)
