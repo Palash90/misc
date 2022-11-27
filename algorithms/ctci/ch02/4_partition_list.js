@@ -5,6 +5,7 @@ class ListNode {
 }
 
 const partitionList = (head, partition) => {
+    //TODO
 }
 
 var node = new ListNode(1, null)
