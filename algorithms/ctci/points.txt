@@ -6,3 +6,8 @@
 
     4. Remember to return value from functions
 
+    5. Always check for duplicates
+
+    6. If array is sorted or not
+
+    7. Can you sort the given array or not.
