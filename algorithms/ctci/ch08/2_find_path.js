@@ -10,14 +10,14 @@ const findPath = (m) => {
     reachable = 0
     var path = []
     console.log("Trying to find paths for",m,path)
-    dfs(m, 0, 0, m.length - 1, m[0].length - 1, path)
+    dfs(m, m.length - 1, m[0].length - 1, 0, 0, path)
     console.log(path)
     console.log("**************************************")
     console.log()
 }
 
 const dfs = (m, r, c, er, ec, path) => {
-    if(r >= m.length || c >= m[0].length) {
+    if(r < 0 || c < 0) {
         return false
     }
 
@@ -32,12 +32,12 @@ const dfs = (m, r, c, er, ec, path) => {
 
     var success = false
 
-    if(dfs(m, r+1, c, er, ec, path)) {
+    if(dfs(m, r-1, c, er, ec, path)) {
         path.push([r,c])
         success = true
     }
 
-    if(dfs(m, r, c+1, er, ec, path)) {
+    if(dfs(m, r, c-1, er, ec, path)) {
         path.push([r,c])
         success = success || true
     }
