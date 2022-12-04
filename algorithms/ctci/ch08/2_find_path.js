@@ -26,7 +26,7 @@ const dfs = (m, r, c, er, ec, path) => {
     }
 
     if(r === er && c === ec) {
-        path.push([r,c])
+        path.push([r,c]) 
         return true
     }
 
@@ -100,7 +100,7 @@ findPath(m)
 
 
 m = [[0,0,0,0,0], [0,0,0,0,0], [0,0,0,0,0], [0,0,0,0,0],[0,0,0,0,0]]
-findPath(m)
+//findPath(m)
 //console.log("LC Solution",m,uniquePaths(m))
 
 var length = 19
