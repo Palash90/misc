@@ -10,14 +10,21 @@ const magicIndex = (a, low, high) => {
     }
 
     var mid = Math.floor((low + high) / 2)
+    var midValue = a[mid]
 
-    if(a[mid] === mid) {
+    if(mid === midValue) {
         return mid
-    } else if(a[mid] > mid) {
-        return magicIndex(a, low, mid -1)
-    } else {
-        return magicIndex(a, mid + 1, high)
     }
+
+    var leftIndex = Math.min(mid - 1, midValue)
+    var left = magicIndex(a, low, leftIndex)
+    if(left >= 0) {
+        return left
+    }
+
+    var rightIndex = Math.max(mid + 1, midValue)
+    var right = magicIndex(a, rightIndex, high)
+    return right 
 }
 
 var a = [-2, -1, 0, 3, 5, 6]
