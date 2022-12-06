@@ -16,17 +16,17 @@ const getPermutations = (s, n) => {
 
     for(var i = 0; i < remainingPermutations.length; i++) {
         var permutation = remainingPermutations[i]
-
-        var permut = [...permutaion]
-        permut = permut.push(currentElement)
+        //        console.log("Line 19",permutation)
+        var permut = [...permutation]
+        permut = permut.concat(currentElement)
         permutations.push(permut)
         for(var j = 0; j < permutation.length; j++) {
             var firstPart = permutation.slice(0, j)
             firstPart.push(currentElement)
-            firstPart = firstPart.concat(permutaion.slice(j))
+            firstPart = firstPart.concat(permutation.slice(j))
+            permutations.push(firstPart)
         }
         //        permutations.push(currentElement + permutation)
-
     }
 
 
@@ -34,4 +34,4 @@ const getPermutations = (s, n) => {
 }
 
 
-console.log(getAllPermutations([1,2,3]))
+console.log(permute([1,2,3]))
