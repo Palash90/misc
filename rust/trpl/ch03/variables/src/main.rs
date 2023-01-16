@@ -12,5 +12,13 @@ fn main() {
     }
 
     //    x = 5; // This line will give compiler error
-    println!("Value of x in Outer Scope is {}", x)
+    println!("Value of x in Outer Scope is {}", x);
+
+    let x = x+1; // This will shadow the outer scope x
+
+    println!("Value of x in Outer Scope after shadowing is {}", x);
+
+    let x = "Hello"; // This will again shadow the x variable with a different type
+
+    println!("Value of x in Outer Scope after shadowing to different type is {}", x);
 }
