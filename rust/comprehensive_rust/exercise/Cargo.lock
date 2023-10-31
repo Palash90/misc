@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "matrix_operations"
+name = "exercise"
 version = "0.1.0"
