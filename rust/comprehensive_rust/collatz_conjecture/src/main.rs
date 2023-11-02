@@ -1,12 +1,13 @@
 fn main() {
-    for i in 1..100000 {
+    // This program will fail in release mode due to integer overflow.
+    for i in 1..16 { 
         print!("i is {i}\n");
         find(i);
     }
 }
 
-fn find(input: i32) {
-    let mut x: i32 = input; // Mutable variable binding
+fn find(input: i8) {
+    let mut x = input; // Mutable variable binding
     print!("{x}"); // Macro for printing, like printf
     while x != 1 {
         // No parenthesis around expression
@@ -16,7 +17,7 @@ fn find(input: i32) {
         } else {
             x = 3 * x + 1;
         }
-        print!(" -> {x}");
+        print!(" -> {}", x);
     }
     println!();
     println!();
