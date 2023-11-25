@@ -5,7 +5,6 @@ fn main() {
     display(sum);
     let sum = add(2, 9);
     display(sum);
-
 }
 
 fn add(a: i32, b: i32) -> i32 {

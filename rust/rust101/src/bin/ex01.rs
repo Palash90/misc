@@ -3,7 +3,7 @@ fn main() {
     print_last_name("Kundu");
 }
 
-fn print_first_name(first_name: &str){
+fn print_first_name(first_name: &str) {
     print_console(first_name)
 }
 
