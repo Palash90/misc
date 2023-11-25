@@ -1,3 +1,4 @@
+// Use of Arithmatic Expression
 fn main() {
     let sum = add(2, 5);
     display(sum);

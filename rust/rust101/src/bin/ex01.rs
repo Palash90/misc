@@ -1,3 +1,4 @@
+// Topic: Use of function to organize code
 fn main() {
     print_first_name("palash");
     print_last_name("Kundu");
