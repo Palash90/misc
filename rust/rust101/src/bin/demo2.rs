@@ -1,12 +1,10 @@
-//  Topic: Print 1 to 4 using loop
+// Topic: While loop demo. Print 1, 2, 3 using while
 
 fn main() {
     let mut counter = 1;
-    loop {
+
+    while counter < 4 {
         println!("{counter}");
         counter = counter + 1;
-        if counter == 5 {
-            break;
-        }
     }
 }
