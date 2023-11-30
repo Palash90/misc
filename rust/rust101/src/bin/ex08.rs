@@ -8,6 +8,15 @@ enum Flavour {
     Rose,
 }
 
+fn get_flavour_str(f: Flavour) -> String {
+    match f {
+        Flavour::Mango => String::from("mango"),
+        Flavour::Chocolate => String::from("chocolate"),
+        Flavour::Strawberry => String::from("strawberry"),
+        Flavour::Rose => String::from("rose"),
+    }
+}
+
 #[derive(Debug)]
 enum Size {
     Small,
@@ -39,8 +48,12 @@ struct Order {
 
 fn print_order(order: Order) {
     println!(
-        "{} is drinking {:#?} {:#?} {:#?}",
-        order.customer, order.size, order.drink.flavour, order.drink.t
+        "{} is drinking {:#?} {} {:#?} worth {} rupees",
+        order.customer,
+        order.size,
+        get_flavour_str(order.drink.flavour),
+        order.drink.t,
+        order.cost
     )
 }
 
@@ -53,6 +66,18 @@ fn main() {
         },
         size: Size::Large,
         cost: 10.0,
+    };
+
+    print_order(order);
+
+    let order = Order {
+        customer: String::from("Rajat"),
+        drink: Drink {
+            t: DrinkType::Sharbat,
+            flavour: Flavour::Strawberry,
+        },
+        size: Size::Large,
+        cost: 20.0,
     };
 
     print_order(order);
