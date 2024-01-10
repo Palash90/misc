@@ -3,3 +3,6 @@ __pycache__/
 python/postfix/result.html
 Rust_Essentials_Training
 target
+.ipynb_checkpoints
+env
+.venv
