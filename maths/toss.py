@@ -6,6 +6,8 @@ def toss(n):
 		result.append(np.random.choice(['H', 'T']))
 	return result
 
+# c is the number of coins to be tossed
+# n is the total number of the coin toss experiment to run to generate the histogram plot
 def run(n, c):
 	result = {}
 	for i in range(c):
