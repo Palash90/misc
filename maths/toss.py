@@ -1,9 +1,9 @@
-import numpy as np
+import random
 import matplotlib.pyplot as plt
 def toss(n):
 	result = []
 	for i in range(n):
-		result.append(np.random.choice(['H', 'T']))
+		result.append(random.choice(['H', 'T']))
 	return result
 
 # c is the number of coins to be tossed
@@ -21,4 +21,4 @@ def run(n, c):
 	plt.bar(result.keys(), result.values())
 	plt.show()
 
-run(10000, 4)
+run(100000, 40)
