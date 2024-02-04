@@ -1,223 +1,577 @@
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-from dataclasses import dataclass
+import json
+from IPython.display import display
+import ipywidgets as widgets
+from ipywidgets import interact
 
 
-FEATURES = ["height", "weight", "bark_days", "ear_head_ratio"]
 
-@dataclass
-class params_gaussian:
-    mu: float
-    sigma: float
+
+def reset_answers():
+    with open("answers.json", "w") as f:
+        json.dump({}, f)
+
         
-    def __repr__(self):
-        return f"params_gaussian(mu={self.mu:.3f}, sigma={self.sigma:.3f})"
-
-
-@dataclass
-class params_binomial:
-    n: int
-    p: float
         
-    def __repr__(self):
-        return f"params_binomial(n={self.n:.3f}, p={self.p:.3f})"
+def exercise_1():
+    mean = widgets.FloatText(
+#         value='',
+        placeholder=0.0,
+        description='Mean:',
+        disabled=False   
+    )
 
+    var = widgets.FloatText(
+#         value='',
+        placeholder=0.0,
+        description='Variance:',
+        disabled=False   
+    )
 
-@dataclass
-class params_uniform:
-    a: int
-    b: int
+    
+    button = widgets.Button(description="Save your answer!", button_style="success")
+    output = widgets.Output()
+    
+    display(mean)
+    display(var)
+#     display(cov)
+    
+    display(button, output)
+
+    def on_button_clicked(b):
         
-    def __repr__(self):
-        return f"params_uniform(a={self.a:.3f}, b={self.b:.3f})"
-    
-    
-breed_params = {
-    0: {
-        "height": params_gaussian(mu=35, sigma=1.5),
-        "weight": params_gaussian(mu=20, sigma=1),
-        "bark_days": params_binomial(n=30, p=0.8),
-        "ear_head_ratio": params_uniform(a=0.6, b=0.1)
-    },
-    
-    1: {
-        "height": params_gaussian(mu=30, sigma=2),
-        "weight": params_gaussian(mu=25, sigma=5),
-        "bark_days": params_binomial(n=30, p=0.5),
-        "ear_head_ratio": params_uniform(a=0.2, b=0.5)
-    },
-    
-    2: {
-        "height": params_gaussian(mu=40, sigma=3.5),
-        "weight": params_gaussian(mu=32, sigma=3),
-        "bark_days": params_binomial(n=30, p=0.3),
-        "ear_head_ratio": params_uniform(a=0.1, b=0.3)
-    }
-    
-}
-
-def round_dict(nested_dict):
-    rounded_dict = {}
-    for key, value in nested_dict.items():
-        if isinstance(value, dict):
-            rounded_dict[key] = round_dict(value)
-        else:
-            rounded_dict[key] = round(value, 3)
-    return rounded_dict
-
-
-def generate_data_for_breed(breed, features, n_samples, params, gg, bg, ug):
-    """
-    Generate synthetic data for a specific breed of dogs based on given features and parameters.
-
-    Parameters:
-        - breed (str): The breed of the dog for which data is generated.
-        - features (list[str]): List of features to generate data for (e.g., "height", "weight", "bark_days", "ear_head_ratio").
-        - n_samples (int): Number of samples to generate for each feature.
-        - params (dict): Dictionary containing parameters for each breed and its features.
-
-    Returns:
-        - df (pandas.DataFrame): A DataFrame containing the generated synthetic data.
-            The DataFrame will have columns for each feature and an additional column for the breed.
-    """
-    
-    df = pd.DataFrame()
-    
-    for feature in features:
-        match feature:
-            case "height" | "weight":
-                df[feature] = gg(params[breed][feature].mu, params[breed][feature].sigma, n_samples)
-                
-            case "bark_days":
-                df[feature] = bg(params[breed][feature].n, params[breed][feature].p, n_samples)
-                                       
-            case "ear_head_ratio":
-                df[feature] = ug(params[breed][feature].a, params[breed][feature].b, n_samples)    
-    
-    df["breed"] = breed
-    
-    return df
-
-
-def generate_data(gaussian_generator, binomial_generator, uniform_generator):
-    # Generate data for each breed
-    df_0 = generate_data_for_breed(breed=0, features=FEATURES, n_samples=1200, params=breed_params, gg=gaussian_generator, bg=binomial_generator, ug=uniform_generator)
-    df_1 = generate_data_for_breed(breed=1, features=FEATURES, n_samples=1350, params=breed_params, gg=gaussian_generator, bg=binomial_generator, ug=uniform_generator)
-    df_2 = generate_data_for_breed(breed=2, features=FEATURES, n_samples=900, params=breed_params, gg=gaussian_generator, bg=binomial_generator, ug=uniform_generator)
-
-    # Concatenate all breeds into a single dataframe
-    df_all_breeds = pd.concat([df_0, df_1, df_2]).reset_index(drop=True)
-
-    # Shuffle the data
-    df_all_breeds = df_all_breeds.sample(frac = 1)
-    
-    return df_all_breeds
-
-
-
-def compute_training_params(df, features):
-    """
-    Computes the estimated parameters for training a model based on the provided dataframe and features.
-
-    Args:
-        df (pandas.DataFrame): The dataframe containing the training data.
-        features (list): A list of feature names to consider.
-
-    Returns:
-        - params_dict (dict): A dictionary that contains the estimated parameters for each breed and feature.  
-    """
-    
-    # Dict that should contain the estimated parameters
-    params_dict = {}
-    
-    
-    ### START CODE HERE ###
-    
-    # Loop over the breeds
-    for breed in range(3): # @REPLACE for None in None:
-        
-        # Slice the original df to only include data for the current breed and the feature columns
-        # For reference in slicing with pandas, you can use the df_breed.groupby function followed by .get_group
-        # or you can use the syntax df[df['breed'] == group]
-        df_breed = df[df["breed"] == breed][features] # @REPLACE df_breed = df[df["breed"] == None][features]
-        
-        # Initialize the inner dict
-        inner_dict = {}
-        
-        # Loop over the columns of the sliced dataframe
-        # You can get the columns of a dataframe like this: dataframe.columns
-        for col in df_breed.columns: 
-            match col: 
-                case "height" | "weight":
-                    mu, sigma = estimate_gaussian_params(df_breed[col])
-                    m = {"mu":mu, "sigma":sigma}
-                    
-                case "bark_days":
-                    n, p = estimate_binomial_params(df_breed[col])
-                    m = {"n":n, "p":p}
-
-                case "ear_head_ratio":
-                    a, b = estimate_uniform_params(df_breed[col])
-                    m = {"a":a, "b":b}
+        with open("answers.json", "r") as f:
+            source_dict = json.load(f)
             
-            # Save the dataclass object within the inner dict
-            inner_dict[col] = m
+        answer_dict = {
+            "ex1": {
+                "mean": mean.value,
+                "var": var.value,
+            }
+        }
         
-        # Save inner dict within outer dict
-        params_dict[breed] = inner_dict
+        source_dict.update(answer_dict)
+        
+        with open("answers.json", "w") as f:
+            json.dump(source_dict, f)
+            
+        with output:
+            print("Answer for exercise 1 saved.")
+            
+
+    button.on_click(on_button_clicked)
+
     
-    ### END CODE HERE ###
+def exercise_2():
+    hist = widgets.ToggleButtons(
+        options=['left', 'center', 'right'],
+        description='Your answer:',
+        disabled=False,
+        button_style='', # 'success', 'info', 'warning', 'danger' or ''
+    )
+    
+    button = widgets.Button(description="Save your answer!", button_style="success")
+    output = widgets.Output()
+    
+    display(hist)
 
-    return params_dict
+    display(button, output)
 
+    def on_button_clicked(b):
+        
+        with open("answers.json", "r") as f:
+            source_dict = json.load(f)
+            
+        answer_dict = {
+            "ex2": {
+                "hist": hist.value
+            }
+        }
+        
+        source_dict.update(answer_dict)
+        
+        with open("answers.json", "w") as f:
+            json.dump(source_dict, f)
+            
+        with output:
+            print("Answer for exercise 2 saved.")
+            
 
-def estimate_gaussian_params(sample):
-    ### START CODE HERE ###
-    mu = np.mean(sample)
-    sigma = np.std(sample)
-    ### END CODE HERE ###
-
-    return mu, sigma
-
-
-def estimate_binomial_params(sample):
-    ### START CODE HERE ###
-    n = 30
-    p = (sample / n).mean()
-    ### END CODE HERE ###
-
-    return n, p
-
-
-def estimate_uniform_params(sample):
-    ### START CODE HERE ###
-    a = sample.min()
-    b = sample.max()
-    ### END CODE HERE ###
-
-    return a, b
-
-
-def plot_gaussian_distributions(gaussian_0, gaussian_1, gaussian_2):
-    fig, ax = plt.subplots(1, 1, figsize=(10, 4))
-    ax.hist(gaussian_0, alpha=0.5, label="gaussian_0", bins=32)
-    ax.hist(gaussian_1, alpha=0.5, label="gaussian_1", bins=32)
-    ax.hist(gaussian_2, alpha=0.5, label="gaussian_2", bins=32)
-    ax.set_title("Histograms of Gaussian distributions")
-    ax.set_xlabel("Values")
-    ax.set_ylabel("Frequencies")
-    ax.legend()
-    plt.show()
+    button.on_click(on_button_clicked)
     
     
-def plot_binomial_distributions(binomial_0, binomial_1, binomial_2):
-    fig, ax = plt.subplots(1, 1, figsize=(10, 4))
-    ax.hist(binomial_0, alpha=0.5, label="binomial_0")
-    ax.hist(binomial_1, alpha=0.5, label="binomial_1")
-    ax.hist(binomial_2, alpha=0.5, label="binomial_2")
-    ax.set_title("Histograms of Binomial distributions")
-    ax.set_xlabel("Values")
-    ax.set_ylabel("Frequencies")
-    ax.legend()
-    plt.show()
+def exercise_3():
+    sum_2_8 = widgets.FloatText(
+#         value='',
+        placeholder=0.0,
+        description='P for sum=2|8',
+        style = {'description_width': 'initial'},
+        disabled=False   
+    )
+
+    sum_3_7 = widgets.FloatText(
+#         value='',
+        placeholder=0.0,
+        description='P for sum=3|7:',
+        style = {'description_width': 'initial'},
+        disabled=False   
+    )
+
+    sum_4_6 = widgets.FloatText(
+#         value='',
+        placeholder=0.0,
+        description='P for sum=4|6:',
+        style = {'description_width': 'initial'},
+        disabled=False   
+    )
+    
+    sum_5 = widgets.FloatText(
+#         value='',
+        placeholder=0.0,
+        description='P for sum=5:',
+        style = {'description_width': 'initial'},
+        disabled=False   
+    )
+    
+    button = widgets.Button(description="Save your answer!", button_style="success")
+    output = widgets.Output()
+    
+    display(sum_2_8)
+    display(sum_3_7)
+    display(sum_4_6)
+    display(sum_5)
+    
+    display(button, output)
+
+    def on_button_clicked(b):
+        
+        with open("answers.json", "r") as f:
+            source_dict = json.load(f)
+            
+        answer_dict = {
+            "ex3": {
+                "sum_2_8": sum_2_8.value,
+                "sum_3_7": sum_3_7.value,
+                "sum_4_6": sum_4_6.value,
+                "sum_5": sum_5.value
+            }
+        }
+        
+        source_dict.update(answer_dict)
+        
+        with open("answers.json", "w") as f:
+            json.dump(source_dict, f)
+            
+        with output:
+            print("Answer for exercise 3 saved.")
+            
+
+    button.on_click(on_button_clicked)
+
+def exercise_4():
+    mean = widgets.FloatText(
+#         value='',
+        placeholder=0.0,
+        description='Mean:',
+        disabled=False   
+    )
+
+    var = widgets.FloatText(
+#         value='',
+        placeholder=0.0,
+        description='Variance:',
+        disabled=False   
+    )
+
+    cov = widgets.FloatText(
+#         value='',
+        placeholder=0.0,
+        description='Covariance:',
+        disabled=False   
+    )
+    
+    button = widgets.Button(description="Save your answer!", button_style="success")
+    output = widgets.Output()
+    
+    display(mean)
+    display(var)
+    display(cov)
+    
+    display(button, output)
+
+    def on_button_clicked(b):
+        
+        with open("answers.json", "r") as f:
+            source_dict = json.load(f)
+            
+        answer_dict = {
+            "ex4": {
+                "mean": mean.value,
+                "var": var.value,
+                "cov": cov.value
+            }
+        }
+        
+        source_dict.update(answer_dict)
+        
+        with open("answers.json", "w") as f:
+            json.dump(source_dict, f)
+            
+        with output:
+            print("Answer for exercise 4 saved.")
+            
+
+    button.on_click(on_button_clicked)
+
+    
+def exercise_5():
+    hist = widgets.ToggleButtons(
+        options=['left', 'center', 'right'],
+        description='Your answer:',
+        disabled=False,
+        button_style='', # 'success', 'info', 'warning', 'danger' or ''
+    )
+    
+    button = widgets.Button(description="Save your answer!", button_style="success")
+    output = widgets.Output()
+    
+    display(hist)
+
+    display(button, output)
+
+    def on_button_clicked(b):
+        
+        with open("answers.json", "r") as f:
+            source_dict = json.load(f)
+            
+        answer_dict = {
+            "ex5": {
+                "hist": hist.value
+            }
+        }
+        
+        source_dict.update(answer_dict)
+        
+        with open("answers.json", "w") as f:
+            json.dump(source_dict, f)
+            
+        with output:
+            print("Answer for exercise 5 saved.")
+            
+
+    button.on_click(on_button_clicked)
+    
+
+def exercise_6():
+    max_sum = widgets.IntSlider(
+        value=2,
+        min=2,
+        max=12,
+        step=1,
+        description='Sum:',
+        disabled=False,
+        continuous_update=False,
+        orientation='horizontal',
+        readout=True,
+        readout_format='d'
+    )
+    
+    button = widgets.Button(description="Save your answer!", button_style="success")
+    output = widgets.Output()
+    
+    display(max_sum)
+
+    display(button, output)
+
+    def on_button_clicked(b):
+        
+        with open("answers.json", "r") as f:
+            source_dict = json.load(f)
+            
+        answer_dict = {
+            "ex6": {
+                "max_sum": max_sum.value
+            }
+        }
+        
+        source_dict.update(answer_dict)
+        
+        with open("answers.json", "w") as f:
+            json.dump(source_dict, f)
+            
+        with output:
+            print("Answer for exercise 6 saved.")
+            
+
+    button.on_click(on_button_clicked)
+    
+    
+def exercise_7():
+    hist = widgets.ToggleButtons(
+        options=['left-most', 'left-center', 'right-center', 'right-most'],
+        description='Your answer:',
+        disabled=False,
+        button_style='', # 'success', 'info', 'warning', 'danger' or ''
+    )
+    
+    button = widgets.Button(description="Save your answer!", button_style="success")
+    output = widgets.Output()
+    
+    display(hist)
+
+    display(button, output)
+
+    def on_button_clicked(b):
+        
+        with open("answers.json", "r") as f:
+            source_dict = json.load(f)
+            
+        answer_dict = {
+            "ex7": {
+                "hist": hist.value
+            }
+        }
+        
+        source_dict.update(answer_dict)
+        
+        with open("answers.json", "w") as f:
+            json.dump(source_dict, f)
+            
+        with output:
+            print("Answer for exercise 7 saved.")
+            
+
+    button.on_click(on_button_clicked)
+    
+    
+def exercise_8():
+    hist = widgets.ToggleButtons(
+        options=['left-most', 'left-center', 'right-center', 'right-most'],
+        description='Your answer:',
+        disabled=False,
+        button_style='', # 'success', 'info', 'warning', 'danger' or ''
+    )
+    
+    button = widgets.Button(description="Save your answer!", button_style="success")
+    output = widgets.Output()
+    
+    display(hist)
+
+    display(button, output)
+
+    def on_button_clicked(b):
+        
+        with open("answers.json", "r") as f:
+            source_dict = json.load(f)
+            
+        answer_dict = {
+            "ex8": {
+                "hist": hist.value
+            }
+        }
+        
+        source_dict.update(answer_dict)
+        
+        with open("answers.json", "w") as f:
+            json.dump(source_dict, f)
+            
+        with output:
+            print("Answer for exercise 8 saved.")
+            
+
+    button.on_click(on_button_clicked)
+    
+    
+def exercise_9():
+    mean = widgets.ToggleButtons(
+        options=['stays the same', 'increases', 'decreases'],
+        description='The mean of the sum:',
+        disabled=False,
+        button_style='',
+    )
+    
+    var = widgets.ToggleButtons(
+        options=['stays the same', 'increases', 'decreases'],
+        description='The variance of the sum:',
+        disabled=False,
+        button_style='',
+    )
+    
+    cov = widgets.ToggleButtons(
+        options=['stays the same', 'increases', 'decreases'],
+        description='The covariance of the joint distribution:',
+        disabled=False,
+        button_style='',
+    )
+    
+    button = widgets.Button(description="Save your answer!", button_style="success")
+    output = widgets.Output()
+    
+    print("As the number of sides in the die increases:")
+    display(mean)
+    display(var)
+    display(cov)
+
+    display(button, output)
+
+    def on_button_clicked(b):
+        
+        with open("answers.json", "r") as f:
+            source_dict = json.load(f)
+            
+        answer_dict = {
+            "ex9": {
+                "mean": mean.value,
+                "var": var.value,
+                "cov": cov.value,
+            }
+        }
+        
+        source_dict.update(answer_dict)
+        
+        with open("answers.json", "w") as f:
+            json.dump(source_dict, f)
+            
+        with output:
+            print("Answer for exercise 9 saved.")
+            
+
+    button.on_click(on_button_clicked)
+    
+    
+
+def exercise_10():
+    options = widgets.RadioButtons(
+                options=[
+                    'the mean and variance is the same regardless of which side is loaded', 
+                    'having the sides 3 or 4 loaded will yield a higher covariance than any other sides', 
+                    'the mean will decrease as the value of the loaded side increases', 
+                    'changing the loaded side from 1 to 6 will yield a higher mean but the same variance'
+                ],
+                layout={'width': 'max-content'}
+            )
+    
+    button = widgets.Button(description="Save your answer!", button_style="success")
+    output = widgets.Output()
+    
+    display(options)
+
+    display(button, output)
+
+    def on_button_clicked(b):
+        
+        with open("answers.json", "r") as f:
+            source_dict = json.load(f)
+            
+        answer_dict = {
+            "ex10": {
+                "options": options.value,
+            }
+        }
+        
+        source_dict.update(answer_dict)
+        
+        with open("answers.json", "w") as f:
+            json.dump(source_dict, f)
+            
+        with output:
+            print("Answer for exercise 10 saved.")
+            
+
+    button.on_click(on_button_clicked)
+    
+    
+def exercise_11():
+    options = widgets.RadioButtons(
+                options=[
+                    'changing the direction of the inequality will change the sign of the covariance', 
+                    'changing the direction of the inequality will change the sign of the mean', 
+                    'changing the direction of the inequality does not affect the possible values of the sum', 
+                    'covariance will always be equal to 0'
+                ],
+                layout={'width': 'max-content'}
+            )
+    
+    button = widgets.Button(description="Save your answer!", button_style="success")
+    output = widgets.Output()
+    
+    display(options)
+
+    display(button, output)
+
+    def on_button_clicked(b):
+        
+        with open("answers.json", "r") as f:
+            source_dict = json.load(f)
+            
+        answer_dict = {
+            "ex11": {
+                "options": options.value,
+            }
+        }
+        
+        source_dict.update(answer_dict)
+        
+        with open("answers.json", "w") as f:
+            json.dump(source_dict, f)
+            
+        with output:
+            print("Answer for exercise 11 saved.")
+            
+
+    button.on_click(on_button_clicked)
+    
+    
+def exercise_12():
+    options = widgets.RadioButtons(
+                options=[
+                    'yes, but only if one of the sides is loaded', 
+                    'no, regardless if the die is fair or not', 
+                    'yes, but only if the die is fair', 
+                    'yes, regardless if the die is fair or not'
+                ],
+                layout={'width': 'max-content'}
+            )
+    
+    button = widgets.Button(description="Save your answer!", button_style="success")
+    output = widgets.Output()
+    
+    display(options)
+
+    display(button, output)
+
+    def on_button_clicked(b):
+        
+        with open("answers.json", "r") as f:
+            source_dict = json.load(f)
+            
+        answer_dict = {
+            "ex12": {
+                "options": options.value,
+            }
+        }
+        
+        source_dict.update(answer_dict)
+        
+        with open("answers.json", "w") as f:
+            json.dump(source_dict, f)
+            
+        with output:
+            print("Answer for exercise 12 saved.")
+            
+
+    button.on_click(on_button_clicked)
+    
+    
+def check_submissions():
+    with open("./answers.json", "r") as f:
+        answer_dict = json.load(f)
+        
+    saved_exercises = [k for k in answer_dict.keys()]
+    expected = ['ex1', 'ex2', 'ex3', 'ex4', 'ex5', 'ex6', 'ex7', 'ex8', 'ex9', 'ex10', 'ex11', 'ex12']
+    missing = [e for e in expected if not e in saved_exercises]
+    
+    if missing:
+        print(f"missing answers for exercises {[ex.split('ex')[1] for ex in missing]}\n\nSave your answers before submitting for grading!")
+        return
+    
+    print("All answers saved, you can submit the assignment for grading!")
