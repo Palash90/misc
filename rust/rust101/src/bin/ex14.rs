@@ -15,6 +15,10 @@ struct Person {
     age: i32,
 }
 
+fn print_color_str(data: &str){
+    println!("{}", data);
+}
+
 impl Color {
     fn from(name: &str) -> Color {
         Color {
@@ -22,7 +26,7 @@ impl Color {
         }
     }
     fn print(&self) {
-        println!("{}", self.name);
+        print_color_str(&self.name);
     }
 }
 
