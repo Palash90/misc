@@ -15,7 +15,7 @@ struct Person {
     age: i32,
 }
 
-fn print_color_str(data: &str){
+fn print_color_str(data: &str) {
     println!("{}", data);
 }
 
