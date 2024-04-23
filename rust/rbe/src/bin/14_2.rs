@@ -7,7 +7,7 @@ struct Matrix<T> {
 impl<T> Matrix<T> {
     fn add(self, _b: &Matrix<T>) -> Matrix<T> {
         // Returning a dummy matrix
-        Matrix {
+        Matrix::<T> {
             _dimensions: vec![1, 2],
             data: self.data,
         }
