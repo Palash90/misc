@@ -23,6 +23,14 @@ fn main() {
         data: vec![3, 4],
     };
 
+    let matrix_c = Matrix {
+        dimensions: vec![1, 2],
+        data: vec![3.4, 4.5],
+    };
+
     let result = add_matrix(matrix_a, matrix_b);
     println!("{:#?}", result);
+
+    // Following line won't work. Uncomment and compile too see why.
+    // add_matrix(result, matrix_c);
 }
