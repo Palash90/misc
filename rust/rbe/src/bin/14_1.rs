@@ -1,36 +1,48 @@
 #[derive(Debug)]
 struct Matrix<T> {
-    dimensions: Vec<u32>,
+    _dimensions: Vec<u32>,
     data: Vec<T>,
 }
 
-fn add_matrix<T>(a: Matrix<T>, b: Matrix<T>) -> Matrix<T> {
+fn add_matrix<T>(a: Matrix<T>, _b: Matrix<T>) -> Matrix<T> {
     // Returning a dummy matrix
     Matrix {
-        dimensions: vec![1, 2],
+        _dimensions: vec![1, 2],
         data: a.data,
     }
 }
 
 fn main() {
     let matrix_a = Matrix {
-        dimensions: vec![1, 2],
+        _dimensions: vec![1, 2],
         data: vec![3, 4],
     };
 
+    // Implicitly determined type
     let matrix_b = Matrix {
-        dimensions: vec![1, 2],
+        _dimensions: vec![1, 2],
         data: vec![3, 4],
     };
 
-    let matrix_c = Matrix {
-        dimensions: vec![1, 2],
+    // Explicitly marked type
+    let _matrix_c = Matrix::<f64> {
+        _dimensions: vec![1, 2],
         data: vec![3.4, 4.5],
     };
 
-    let result = add_matrix(matrix_a, matrix_b);
+    let matrix_d = Matrix {
+        _dimensions: vec![1, 2],
+        data: vec![3, 4],
+    };
+
+    // Explicitly marked with type
+    let result = add_matrix::<i32>(matrix_a, matrix_b);
+    println!("{:#?}", result);
+
+    // Implicitly determined type
+    let result = add_matrix(result, matrix_d);
     println!("{:#?}", result);
 
     // Following line won't work. Uncomment and compile too see why.
-    // add_matrix(result, matrix_c);
+    // add_matrix(result, _matrix_c);
 }
