@@ -122,8 +122,9 @@ fn main() {
     vec.push(1);
     println!("{:?}", vec);
 
-    */
+    let mut vec = NumericVec::<String>::new();
+    vec.push(1);
+    println!("{:?}", vec);
 
-    // Following line will throw an error as String is not bound by Numeric
-    // let strVec = NumericVec::<String>::new();
+    */
 }
