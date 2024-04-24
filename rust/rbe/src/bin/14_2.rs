@@ -14,7 +14,6 @@ impl<T> Matrix<T> {
     }
 }
 
-
 fn main() {
     let matrix_a = Matrix {
         _dimensions: vec![1, 2],
@@ -29,5 +28,20 @@ fn main() {
 
     // Implicitly determined type
     let result = matrix_a.add(&matrix_b);
+    println!("{:#?}", result);
+
+    // Implicitly determined type
+    let matrix_s = Matrix {
+        _dimensions: vec![1, 2],
+        data: vec![String::from("Hello"), String::from("World")],
+    };
+
+    // Implicitly determined type
+    let matrix_t = Matrix {
+        _dimensions: vec![1, 2],
+        data: vec![String::from("Nice"), String::from("Day")],
+    };
+
+    let result = matrix_s.add(&matrix_t);
     println!("{:#?}", result);
 }
