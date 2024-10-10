@@ -49,7 +49,6 @@
 class SimpleCPU:
     def __init__(self):
         self.memory = [0] * 256  # 256 bytes of RAM
-        self.hard_disk = [0] * 256  # Hard disk storage
         self.PC = 0  # Program counter
         self.ACC = 0  # Accumulator
         self.REG = [0] * 4  # General-purpose registers
