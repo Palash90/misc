@@ -62,7 +62,6 @@ class SimpleCPU:
     def execute_instruction(self):
         instruction = self.memory[self.PC]
         opcode = instruction[0]
-        
         if opcode == 0x00:  # NOP
             self.PC += 1
         elif opcode == 0x01:  # LOAD
@@ -103,7 +102,7 @@ class SimpleCPU:
 
     def read_input(self):
         # Simulate reading input from a device (e.g., keyboard)
-        return int(input("Enter a number: "))  # Simple console input
+        return input(">>> ")  # ESimple console input
 
     def write_output(self, value):
         # Simulate writing output to a device (e.g., screen)
@@ -122,9 +121,64 @@ boot_code = [
     (0x07,)        # HALT
 ]
 
+# Instructions:
+# 0x08 - IN reg_num      ; Read command input into register
+# 0x01 - LOAD reg_num, address  ; Load the input from memory
+# 0x02 - STORE reg_num, address   ; Store the register value to memory
+# 0x03 - ADD reg1, reg2     ; Add values in registers
+# 0x06 - JZ reg_num, address ; Jump to address if zero
+# 0x05 - JMP address         ; Jump to specified address
+# 0x09 - OUT reg_num         ; Output the value of a register
+# 0x07 - HALT                ; Stop execution
+
+# Program
+file_sys=[ 
+    (0x08, 0),            # IN reg[0] (Get user input command into reg[0])
+    (0x02, 0, 0xFE),      # STORE reg[0], 0xFE (Store command in memory 0xFE)
+    (0x01, 0, 0xFE),      # LOAD reg[0], 0xFE (Load command into reg[0])
+    
+    (0x06, 0, 0x20),      # JZ reg[0], 0x20 (Jump if command is zero, which means invalid)
+    
+    (0x05, 0x10),         # JMP 0x10 (Jump to address 0x10 to parse the command)
+    
+    # Command Parsing
+    (0xFE, 0),            # Command area (using input)
+    (0xFD, 0),            # Filename storage
+    (0xFC, 0),            # Content storage
+    
+    # mk command
+    (0x08, 1),            # IN reg[1] (Get filename into reg[1])
+    (0x02, 1, 0xFD),      # STORE reg[1], 0xFD (Store filename in memory 0xFD)
+    (0x08, 2),            # IN reg[2] (Get content into reg[2])
+    (0x02, 2, 0xFC),      # STORE reg[2], 0xFC (Store content in memory 0xFC)
+    
+    # Output filename and content
+    (0x01, 1, 0xFD),      # LOAD reg[1], 0xFD (Load filename from memory)
+    (0x09, 1),            # OUT reg[1] (Output filename)
+    (0x01, 2, 0xFC),      # LOAD reg[2], 0xFC (Load content from memory)
+    (0x09, 2),            # OUT reg[2] (Output content)
+
+    # rd command
+    (0x05, 0x30),         # JMP 0x30 (Jump to read command)
+    
+    # Read command implementation
+    (0x01, 1, 0xFD),      # LOAD reg[1], 0xFD (Load filename from memory)
+    (0x09, 1),            # OUT reg[1] (Output filename)
+
+    # dl command
+    (0x05, 0x40),         # JMP 0x40 (Jump to delete command)
+    
+    # Delete command implementation
+    (0x01, 1, 0xFD),      # LOAD reg[1], 0xFD (Load filename)
+    (0x02, 1, 0x00),      # STORE reg[1], 0x00 (Mark as deleted)
+    
+    (0x07)                # HALT
+]
+
+
 # Initialize CPU and load boot code
 cpu = SimpleCPU()
-cpu.load_boot_code(boot_code)
+cpu.load_boot_code(file_sys)
 
 # Run CPU
 cpu.run()
