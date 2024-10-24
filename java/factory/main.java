@@ -8,7 +8,7 @@ public class main {
 
         // The following line will cause an error as the consturctor of Test is not accessible outside of package.
         // So we are stuck with the factory class.
-        Test test1 = new Test();
-        test1.say();
+        //Test test1 = new Test();
+        //test1.say();
     }
 }
