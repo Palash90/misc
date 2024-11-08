@@ -17,7 +17,7 @@ public class LargestContiguousSum {
     }
 
     public static void main(String[] args) {
-        int[] arr = {-3, 12, 2, -1, 4, -3};
+        int[] arr = {-3, -12, -2, 3, -9, -4, -3};
         System.out.println(largestContiguousSum(arr));
     }
 }
