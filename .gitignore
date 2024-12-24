@@ -7,3 +7,7 @@ target
 env
 .venv
 venv
+*.class
+*.exe
+*.pdb
+*.exe
