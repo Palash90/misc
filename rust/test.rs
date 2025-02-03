@@ -1,3 +1,4 @@
+
 fn main() {
     let mut input_text = String::new();
     io::stdin()
