@@ -17,26 +17,33 @@ fn add_world(s: Arc<RefCell<String>>) {
     s.borrow_mut().push_str("World");
 }
 
-fn make_linked_list() {
+fn make_linked_list() -> List {
     let mut b = Box::new(32);
-
-    println!("{b}");
-
     *b = 20;
 
-    println!("{b}");
+    let mut l = Cons(2, Box::new(Nil));
+    l = Cons(1, Box::new(l));
+    l
+}
 
-    let mut l = Nil;
+fn change_value(l: &mut List) {
+    match l {
+        Cons(i, b) => {
+            *i = *i * 10;
+            change_value(b);
+        },
+        _ => {}
+    }
+}
 
-    println!("{:?}", l);
-
-    l = Cons(2, Box::new(Nil));
-
-    println!("{:?}", l);
-
-    l = Cons(3, Box::new(l));
-
-    println!("{:?}", l);
+fn show_list(l: &List) {
+    match l {
+        Nil => println!("End"),
+        Cons(i, l) => {
+            print!("{i}, ");
+            show_list(&l);
+        }
+    }
 }
 
 fn main() {
@@ -50,5 +57,10 @@ fn main() {
     add_world(Arc::clone(&r));
     println!("{}", r.borrow());
 
-    make_linked_list();
+    let mut l = make_linked_list();
+
+    show_list(&l);
+
+    change_value(&mut l);
+    show_list(&l);
 }
