@@ -1,14 +1,30 @@
+use std::net::TcpListener;
+use std::sync::mpsc;
+use std::thread;
+use std::io::BufReader;
+use std::io::BufRead;
 
 fn main() {
-    let mut input_text = String::new();
-    io::stdin()
-        .read_line(&mut input_text)
-        .expect("failed to read from stdin");
+    let (req_tx, req_rx) = mpsc::channel();
 
-    let array = [1,2,3,4];
-    let trimmed = input_text.trim();
-    match trimmed.parse::<u32>() {
-        Ok(i) => println!("your integer input: {}, your data: {}", i, arr[i]),
-        Err(..) => println!("this was not an integer: {}", trimmed),
-    };
+    let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
+
+    for stream in listener.incoming() {
+        let stream = stream.unwrap();
+
+        let buf_reader = BufReader::new(&stream);
+        let http_request: Vec<_> = buf_reader
+            .lines()
+            .map(|result| result.unwrap())
+            .take_while(|line| !line.is_empty())
+            .collect();
+
+        println!("Request: {http_request:#?}");
+
+        req_tx.send(http_request).unwrap();
+    }
+
+    for received in req_rx {
+        println!("Got: {received:#?}");
+    }
 }
