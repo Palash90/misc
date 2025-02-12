@@ -34,11 +34,6 @@ fn process_request(processor_req_q: Arc<Mutex<VecDeque<TcpStream>>>) -> ! {
     loop {
         {
             let mut queue = processor_req_q.lock().unwrap();
-            println!(
-                "Processing thread acquired mutex lock, number of streams to process {}",
-                queue.len()
-            );
-
             let mut i = 0;
             while i < queue.len() {
                 let mut req = queue.pop_front().unwrap();
@@ -50,7 +45,20 @@ fn process_request(processor_req_q: Arc<Mutex<VecDeque<TcpStream>>>) -> ! {
                         println!("Client disconnected, removing stream");
                     }
                     Ok(n) => {
-                        println!("Received: {:?}", String::from_utf8_lossy(&buffer[..n]));
+                        let mut op = String::from_utf8_lossy(&buffer[..n]).into_owned();
+                        op = op.trim().into();
+                        println!("Received: {:?}", op);
+
+                        if op.eq("async") {
+                            println!("Running long loop");
+                            let mut i = 0_u64;
+                            while i < 100_000_000_00 {
+                                i = i + 1
+                            }
+                        }
+
+                        println!("Sending back {}", op);
+
                         req.write_all(&buffer[..n]).unwrap();
                         req.flush().unwrap();
                         queue.push_back(req); // Reinsert active streams
@@ -67,8 +75,7 @@ fn process_request(processor_req_q: Arc<Mutex<VecDeque<TcpStream>>>) -> ! {
                 i += 1;
             }
         }
-        println!("Processing thread going to sleep \n");
-        thread::sleep(Duration::from_millis(10));
+        thread::sleep(Duration::from_nanos(10));
     }
 }
 
