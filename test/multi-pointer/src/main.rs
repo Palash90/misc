@@ -39,24 +39,32 @@ fn process_request(processor_req_q: Arc<Mutex<VecDeque<TcpStream>>>) -> ! {
                 queue.len()
             );
 
-            while let Some(mut req) = queue.pop_front() {
-                let mut r = [0u8; 512];
-                match req.read(&mut r) {
+            let mut i = 0;
+            while i < queue.len() {
+                let mut req = queue.pop_front().unwrap();
+                let mut buffer = [0u8; 512];
+
+                match req.read(&mut buffer) {
                     Ok(0) => {
-                        // Client disconnected
+                        // Client disconnected, drop the stream
                         println!("Client disconnected, removing stream");
                     }
                     Ok(n) => {
-                        println!("{:?}", String::from_utf8_lossy(&r[..n]));
-                        req.write_all(&r[..n]).unwrap();
+                        println!("Received: {:?}", String::from_utf8_lossy(&buffer[..n]));
+                        req.write_all(&buffer[..n]).unwrap();
                         req.flush().unwrap();
-                        queue.push_back(req); // Put back into queue if still active
+                        queue.push_back(req); // Reinsert active streams
                     }
-                    Err(_) => {
-                        // Error means stream is not ready yet, put it back
+                    Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                        // No data available, reinsert stream
                         queue.push_back(req);
                     }
+                    Err(e) => {
+                        // Some other error occurred, drop the connection
+                        println!("Error reading from stream: {:?}", e);
+                    }
                 }
+                i += 1;
             }
         }
         println!("Processing thread going to sleep \n");
@@ -69,6 +77,9 @@ fn handle_incoming_requests(listener: TcpListener, thread_req_q: Arc<Mutex<VecDe
         match stream {
             Ok(stream) => {
                 println!("Connnected");
+                stream
+                    .set_nonblocking(true)
+                    .expect("Failed to set non-blocking mode");
 
                 {
                     let thread_req_q = thread_req_q.lock();
