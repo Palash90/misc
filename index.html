@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chat</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,sans-serif;background:#1a1a2e;color:#e0e0e0;height:100vh;display:flex;flex-direction:column}
+#sidebar-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:99;display:none}
+#sidebar-overlay.open{display:block}
+#sidebar{position:fixed;top:0;left:0;width:280px;height:100%;background:#16162a;border-right:1px solid #333;z-index:100;transform:translateX(-100%);transition:transform .3s ease;display:flex;flex-direction:column;overflow:hidden}
+#sidebar.open{transform:translateX(0)}
+#sidebar-header{padding:12px;border-bottom:1px solid #333}
+#new-chat-btn{width:100%;padding:10px;border-radius:8px;border:1px solid #444;background:#2a2a3e;color:#e0e0e0;cursor:pointer;font-size:14px}
+#new-chat-btn:hover{background:#3a3a4e}
+#session-list{flex:1;overflow-y:auto;padding:8px}
+.session-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:8px;cursor:pointer;margin-bottom:4px;transition:background .2s}
+.session-item:hover{background:#2a2a3e}
+.session-item.active{background:#2d3a5e;border-left:3px solid #4a6cf7}
+.session-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.session-actions{display:flex;gap:4px;opacity:0;transition:opacity .2s}
+.session-item:hover .session-actions{opacity:1}
+.session-actions button{background:none;border:none;cursor:pointer;padding:2px 4px;font-size:14px;border-radius:4px}
+.session-actions button:hover{background:#3a3a4e}
+#sidebar-toggle{background:none;border:none;color:#e0e0e0;font-size:20px;cursor:pointer;padding:0 8px 0 0;line-height:1}
+#sidebar-toggle:hover{color:#fff}
+#model-bar{display:flex;align-items:center;gap:8px;padding:6px 16px;background:#12122a;border-bottom:1px solid #333;font-size:12px}
+#model-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+#model-dot.chat{background:#4ade80}
+#model-dot.image{background:#f472b6}
+#model-dot.loading{background:#fbbf24;animation:pulse 0.8s ease-in-out infinite}
+#model-dot.unloaded{background:#6b7280}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+#chat{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px}
+.msg{max-width:80%;padding:10px 14px;border-radius:12px;line-height:1.5;white-space:pre-wrap;position:relative}
+.msg:hover .copy-btn{opacity:1}
+.user{background:#2d3a5e;align-self:flex-end}
+.bot{background:#2a2a3e;align-self:flex-start}
+.bot img{max-width:100%;border-radius:8px;margin-top:8px}
+.msg-header{display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap}
+.tool-badge{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500;letter-spacing:0.3px}
+.tool-badge.search{background:#1e3a5f;color:#60a5fa;cursor:pointer}
+.tool-badge.image{background:#3b1f3b;color:#f472b6}
+.tool-badge{position:relative}
+.search-popup{display:none;position:absolute;top:100%;left:0;z-index:50;background:#1a1a2e;border:1px solid #444;border-radius:8px;padding:10px;min-width:280px;max-width:400px;box-shadow:0 4px 20px rgba(0,0,0,0.5);margin-top:4px}
+.copy-btn{opacity:0;transition:opacity .2s;background:none;border:none;cursor:pointer;color:#888;font-size:13px;padding:0 4px;border-radius:4px;margin-left:auto}
+.copy-btn:hover{color:#e0e0e0;background:#3a3a4e}
+.status{color:#888;font-style:italic;padding:4px 0;font-size:13px;align-self:center}
+#input-bar{display:flex;gap:8px;padding:12px 20px;background:#16162a;border-top:1px solid #333;align-items:center}
+#msg-input{flex:1;padding:10px 14px;border-radius:8px;border:1px solid #444;background:#2a2a3e;color:#e0e0e0;font-size:14px;resize:none;outline:none;font-family:inherit;line-height:1.4;max-height:120px}
+#input-bar button{padding:10px 18px;border-radius:8px;border:none;cursor:pointer;font-size:14px}
+#send-btn{background:#4a6cf7;color:#fff}#send-btn:hover{background:#5a7cf7}#send-btn:disabled{opacity:0.5}
+#attach-btn{background:#333;color:#ccc;font-size:18px;padding:10px 14px}
+#image-preview{max-width:120px;max-height:80px;border-radius:6px;display:none}
+input[type=file]{display:none}
+</style>
+</head>
+<body>
+<div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+<div id="sidebar">
+  <div id="sidebar-header">
+    <button id="new-chat-btn" onclick="newChat()">+ New Chat</button>
+  </div>
+  <div id="session-list"></div>
+</div>
+<div id="model-bar">
+  <button id="sidebar-toggle" onclick="toggleSidebar()">&#9776;</button>
+  <span id="model-dot"></span>
+  <span id="model-label">Initializing...</span>
+  <span id="model-tps" style="margin-left:12px;font-size:12px;color:#888"></span>
+  <span id="token-indicator" style="margin-left:auto;font-size:12px;color:#888"></span>
+</div>
+<div id="chat"></div>
+<div id="input-bar">
+  <button id="attach-btn" onclick="document.getElementById('file-input').click()">+</button>
+  <input type="file" id="file-input" onchange="handleFile(event)">
+  <img id="image-preview">
+  <span id="file-badge" style="display:none;background:#2a3a5e;padding:4px 10px;border-radius:6px;font-size:12px;align-items:center;gap:6px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+  <textarea id="msg-input" placeholder="Type a message... (Enter to send, Shift+Enter for new line)" rows="1" autofocus></textarea>
+  <button id="send-btn" onclick="send()">Send</button>
+</div>
+<script>
+let currentSid = null;
+let sessionsList = [];
+const chat = document.getElementById('chat');
+const input = document.getElementById('msg-input');
+let attachedImage = null;
+let attachedFileName = null;
+let attachedFileText = null;
+let loadingSessions = {};
+
+const CODE_EXTS = new Set([".py",".js",".ts",".jsx",".tsx",".java",".cpp",".c",".h",".hpp",".cs",".go",".rs",".rb",".php",".swift",".kt",".scala",".dart",".sh",".bash",".pl",".pm",".lua",".r",".sql",".html",".css",".scss",".sass",".less",".vue",".svelte",".yaml",".yml",".json",".xml",".toml",".ini",".cfg",".md",".tex",".dockerfile",".tf",".zig",".nim",".hs",".ml",".fs",".erl",".elm",".purs",".nix",".ps1",".bat",".cmake",".proto",".gradle",".tex",".cls",".sty",".tex",".bib"]);
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+function clearAttachments() {
+  attachedImage = null;
+  attachedFileName = null;
+  attachedFileText = null;
+  document.getElementById('image-preview').style.display = 'none';
+  document.getElementById('file-badge').style.display = 'none';
+  document.getElementById('file-input').value = '';
+}
+
+function showFileBadge(name) {
+  const badge = document.getElementById('file-badge');
+  badge.style.display = 'inline-flex';
+  badge.textContent = '';
+  const span = document.createElement('span');
+  span.textContent = name.length > 25 ? name.slice(0, 22) + '...' : name;
+  span.style.overflow = 'hidden';
+  span.style.textOverflow = 'ellipsis';
+  const close = document.createElement('span');
+  close.textContent = 'x';
+  close.style.cursor = 'pointer';
+  close.style.color = '#f87171';
+  close.style.fontWeight = 'bold';
+  close.style.marginLeft = '4px';
+  close.onclick = clearAttachments;
+  badge.appendChild(span);
+  badge.appendChild(close);
+}
+
+async function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > MAX_FILE_SIZE) {
+    alert('File too large (max 10MB): ' + file.name);
+    e.target.value = '';
+    return;
+  }
+  clearAttachments();
+  const ext = '.' + file.name.split('.').pop().toLowerCase();
+  if (['.png','.jpg','.jpeg','.gif','.webp','.bmp'].includes(ext)) {
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      attachedImage = ev.target.result.split(',')[1];
+      document.getElementById('image-preview').src = ev.target.result;
+      document.getElementById('image-preview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+    return;
+  }
+  if (CODE_EXTS.has(ext)) {
+    const text = await file.text();
+    if (text.length > 100000) { alert('File too large (text exceeds 100KB): ' + file.name); return; }
+    attachedFileName = file.name;
+    attachedFileText = text;
+    showFileBadge(file.name);
+    return;
+  }
+  if (['.pdf','.xls','.xlsx','.doc','.docx'].includes(ext)) {
+    showFileBadge(file.name + ' (extracting...)');
+    const reader = new FileReader();
+    reader.onload = async function(ev) {
+      const b64 = ev.target.result.split(',')[1];
+      try {
+        const r = await fetch('/api/extract-file', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:file.name, data:b64}) });
+        const data = await r.json();
+        if (data.text) {
+          attachedFileName = file.name;
+          attachedFileText = data.text;
+          showFileBadge(file.name);
+        } else {
+          clearAttachments();
+          alert('Could not extract text from ' + file.name + (data.error ? ': ' + data.error : ''));
+        }
+      } catch(e) {
+        clearAttachments();
+        alert('Error processing file: ' + e.message);
+      }
+    };
+    reader.readAsDataURL(file);
+    return;
+  }
+  const isCode = confirm('Unknown file type: ' + file.name + '. Is this a code/text file?');
+  if (isCode) {
+    const text = await file.text();
+    attachedFileName = file.name;
+    attachedFileText = text;
+    showFileBadge(file.name);
+  } else {
+    clearAttachments();
+  }
+}
+
+function addMsg(role, text, img, imgUrl, genPrompt, toolsUsed, imageModel, searchDetails) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  const header = document.createElement('div');
+  header.className = 'msg-header';
+  if (role === 'bot' && toolsUsed && toolsUsed.length) {
+    toolsUsed.forEach(function(t) {
+      const badge = document.createElement('span');
+      badge.className = 'tool-badge ' + (t === 'web_search' ? 'search' : t === 'generate_image' ? 'image' : '');
+      let label = t === 'web_search' ? 'Web Search' : t === 'generate_image' ? 'Image Gen' : t;
+      if (t === 'generate_image' && imageModel) label += ' (' + imageModel + ')';
+      badge.textContent = label;
+      if (t === 'web_search' && searchDetails && searchDetails.length) {
+        const popup = document.createElement('div');
+        popup.className = 'search-popup';
+        const details = searchDetails;
+        const queryDiv = document.createElement('div');
+        queryDiv.style.marginBottom = '6px';
+        queryDiv.innerHTML = '<span style="color:#888;font-size:11px">Query:</span> <span style="color:#e0e0e0">' + details.map(function(sd){return sd.query}).join('; ') + '</span>';
+        popup.appendChild(queryDiv);
+        details.forEach(function(sd) {
+          if (sd.search_url) {
+            const urlDiv = document.createElement('div');
+            urlDiv.style.marginBottom = '6px';
+            urlDiv.style.fontSize = '11px';
+            urlDiv.style.wordBreak = 'break-all';
+            urlDiv.innerHTML = '<span style="color:#888">SearXNG:</span> <a href="' + sd.search_url + '" target="_blank" style="color:#60a5fa">' + sd.search_url + '</a>';
+            popup.appendChild(urlDiv);
+          }
+          if (sd.results && sd.results.length) {
+            sd.results.forEach(function(r) {
+              const link = document.createElement('a');
+              link.href = r.url;
+              link.target = '_blank';
+              link.textContent = r.title || r.url;
+              link.style.display = 'block';
+              link.style.color = '#60a5fa';
+              link.style.fontSize = '12px';
+              link.style.padding = '2px 0';
+              link.style.textDecoration = 'none';
+              link.title = r.url;
+              popup.appendChild(link);
+            });
+          }
+        });
+        badge.appendChild(popup);
+        var hideTimer = null;
+        function showPopup() { if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; } popup.style.display = 'block'; }
+        function hidePopup() { hideTimer = setTimeout(function() { popup.style.display = 'none'; }, 300); }
+        badge.addEventListener('mouseenter', showPopup);
+        badge.addEventListener('mouseleave', hidePopup);
+        popup.addEventListener('mouseenter', showPopup);
+        popup.addEventListener('mouseleave', hidePopup);
+      }
+      header.appendChild(badge);
+    });
+  }
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'copy-btn';
+  copyBtn.textContent = 'Copy';
+  copyBtn.onclick = function() {
+    let copyText = text || '';
+    if (genPrompt) copyText = 'Prompt: ' + genPrompt + '\n\n' + copyText;
+    navigator.clipboard.writeText(copyText).then(function() {
+      copyBtn.textContent = 'Copied!';
+      setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+    });
+  };
+  header.appendChild(copyBtn);
+  div.appendChild(header);
+  if (imgUrl) {
+    const el = document.createElement('img');
+    el.src = imgUrl;
+    el.style.maxWidth = '100%';
+    div.appendChild(el);
+  }
+  if (img) {
+    const el = document.createElement('img');
+    el.src = 'data:image/jpeg;base64,' + img;
+    el.style.maxWidth = '100%';
+    div.appendChild(el);
+  }
+  if (genPrompt) {
+    const p = document.createElement('div');
+    p.style.whiteSpace = 'pre-wrap';
+    p.style.fontSize = '12px';
+    p.style.color = '#aaa';
+    p.style.marginBottom = '4px';
+    p.style.fontStyle = 'italic';
+    p.textContent = 'Prompt: ' + genPrompt;
+    div.appendChild(p);
+  }
+  if (text) {
+    const p = document.createElement('div');
+    p.style.whiteSpace = 'pre-wrap';
+    p.textContent = text;
+    div.appendChild(p);
+  }
+  chat.appendChild(div);
+  if (chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 40) chat.scrollTop = chat.scrollHeight;
+}
+
+function addStatus(text) {
+  let el = document.getElementById('status-line');
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'status';
+    el.id = 'status-line';
+    chat.appendChild(el);
+  }
+  el.textContent = text;
+  if (chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 40) chat.scrollTop = chat.scrollHeight;
+}
+
+function removeStatus() {
+  const el = document.getElementById('status-line');
+  if (el) { el.remove(); }
+  if (chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 40) chat.scrollTop = chat.scrollHeight;
+}
+
+function updateLoadingUI() {
+  const hasPending = !!loadingSessions[currentSid];
+  document.getElementById('send-btn').textContent = hasPending ? 'Queue' : 'Send';
+}
+
+function updateTokenIndicator(count) {
+  const el = document.getElementById('token-indicator');
+  if (!el) return;
+  if (count > 1000) {
+    el.textContent = '~' + (count / 1000).toFixed(1) + 'k tokens';
+  } else {
+    el.textContent = '~' + count + ' tokens';
+  }
+}
+
+input.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) { e.preventDefault(); send(); }
+});
+input.addEventListener('input', function() {
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+});
+
+async function pollModelStatus() {
+  try {
+    const r = await fetch('/api/model-status');
+    const data = await r.json();
+    const dot = document.getElementById('model-dot');
+    const label = document.getElementById('model-label');
+    dot.className = data.model;
+    const labels = {
+      chat_loaded: 'Chat model ready',
+      image_active: 'Image generation active',
+      loading: 'Loading model...',
+      unloading: 'Unloading model...',
+      unloaded: 'No model loaded'
+    };
+    label.textContent = labels[data.model] || data.model;
+    const tpsEl = document.getElementById('model-tps');
+    if (data.predicted_per_second != null) {
+      if (data.predicted_per_second < 5) {
+        tpsEl.innerHTML = '<span style="color:#f87171">&#9888; ' + data.predicted_per_second.toFixed(1) + ' t/s</span>';
+      } else {
+        tpsEl.textContent = data.predicted_per_second.toFixed(1) + ' t/s';
+      }
+    } else {
+      tpsEl.textContent = '';
+    }
+  } catch(e) {}
+}
+setInterval(pollModelStatus, 2000);
+pollModelStatus();
+
+function renderMessage(msg) {
+  if (msg.role === 'system' || msg.role === 'tool') return;
+  if (msg.role === 'user') {
+    if (typeof msg.content === 'string') {
+      addMsg('user', msg.content);
+    } else if (Array.isArray(msg.content)) {
+      let text = '', img = null;
+      msg.content.forEach(function(part) {
+        if (part.type === 'text') text += part.text;
+        else if (part.type === 'image_url') {
+          const url = part.image_url.url;
+          if (url.startsWith('data:')) img = url.split(',')[1];
+        }
+      });
+      addMsg('user', text, img);
+    }
+  } else if (msg.role === 'assistant') {
+    if (typeof msg.content === 'string' && msg.content) {
+      addMsg('bot', msg.content, null, msg._image_url, msg._gen_prompt, msg._tools_used, msg._image_model, msg._search_details);
+    }
+  }
+}
+
+function renderSessions() {
+  const list = document.getElementById('session-list');
+  list.innerHTML = '';
+  sessionsList.forEach(function(s) {
+    const item = document.createElement('div');
+    item.className = 'session-item' + (s.session_id === currentSid ? ' active' : '');
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'session-name';
+    nameSpan.textContent = s.name.length > 30 ? s.name.slice(0, 30) + '...' : s.name;
+    const actions = document.createElement('span');
+    actions.className = 'session-actions';
+    const renameBtn = document.createElement('button');
+    renameBtn.innerHTML = '&#9998;';
+    renameBtn.title = 'Rename';
+    renameBtn.onclick = function(e) { e.stopPropagation(); renameSession(s.session_id); };
+    const deleteBtn = document.createElement('button');
+    deleteBtn.innerHTML = '&#128465;';
+    deleteBtn.title = 'Delete';
+    deleteBtn.onclick = function(e) { e.stopPropagation(); deleteSession(s.session_id); };
+    actions.appendChild(renameBtn);
+    actions.appendChild(deleteBtn);
+    item.appendChild(nameSpan);
+    item.appendChild(actions);
+    item.onclick = function() { switchSession(s.session_id); closeSidebar(); };
+    list.appendChild(item);
+  });
+}
+
+async function fetchSessions() {
+  const r = await fetch('/api/sessions');
+  return await r.json();
+}
+
+async function switchSession(sid) {
+  currentSid = sid;
+  localStorage.setItem('last_sid', sid);
+  updateLoadingUI();
+  try {
+    const r = await fetch('/api/sessions/' + sid + '/messages');
+    const data = await r.json();
+    chat.innerHTML = '';
+    if (data.messages) {
+      data.messages.forEach(renderMessage);
+      updateTokenIndicator(data.token_estimate || 0);
+    } else {
+      data.forEach(renderMessage);
+    }
+  } catch(e) {
+    chat.innerHTML = '';
+    updateTokenIndicator(0);
+  }
+  renderSessions();
+}
+
+async function newChat() {
+  const r = await fetch('/api/sessions', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:'New Chat'}) });
+  const data = await r.json();
+  currentSid = data.session_id;
+  localStorage.setItem('last_sid', currentSid);
+  chat.innerHTML = '';
+  updateTokenIndicator(0);
+  updateLoadingUI();
+  sessionsList = await fetchSessions();
+  renderSessions();
+  closeSidebar();
+}
+
+async function deleteSession(sid) {
+  if (!confirm('Delete this session?')) return;
+  await fetch('/api/sessions/' + sid, { method:'DELETE' });
+  sessionsList = await fetchSessions();
+  if (sid === currentSid) {
+    if (sessionsList.length > 0) {
+      await switchSession(sessionsList[0].session_id);
+    } else {
+      await newChat();
+    }
+  } else {
+    renderSessions();
+  }
+}
+
+async function renameSession(sid) {
+  const s = sessionsList.find(function(x) { return x.session_id === sid; });
+  const newName = prompt('Session name:', s ? s.name : '');
+  if (!newName || newName.trim() === '') return;
+  const prevSid = currentSid;
+  await fetch('/api/sessions/' + sid, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name: newName.trim()}) });
+  sessionsList = await fetchSessions();
+  currentSid = prevSid;
+  renderSessions();
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+}
+
+async function init() {
+  sessionsList = await fetchSessions();
+  const lastSid = localStorage.getItem('last_sid');
+  if (lastSid && sessionsList.some(function(s) { return s.session_id === lastSid; })) {
+    await switchSession(lastSid);
+  } else if (sessionsList.length > 0) {
+    await switchSession(sessionsList[0].session_id);
+  } else {
+    await newChat();
+  }
+}
+
+async function send() {
+  const text = input.value.trim();
+  if (!text && !attachedImage && !attachedFileText) return;
+  let finalText = text;
+  if (attachedFileText) finalText = '[FILE: ' + attachedFileName + ']\n```\n' + attachedFileText + '\n```\n[END FILE]\n\n' + (text || 'See attached file above.');
+  const img = attachedImage;
+  addMsg('user', text || ('📄 ' + (attachedFileName || 'file')), img);
+  input.value = '';
+  clearAttachments();
+
+  const taskSid = currentSid;
+  loadingSessions[taskSid] = (loadingSessions[taskSid] || 0) + 1;
+  updateLoadingUI();
+
+  let taskId = null;
+  try {
+    const r = await fetch('/api/chat', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({session_id:currentSid, message:finalText, image:img}) });
+    if (r.status === 503) {
+      const errData = await r.json();
+      addMsg('bot', errData.error || 'Server is busy. Please try again.');
+      loadingSessions[taskSid]--;
+      if (!loadingSessions[taskSid]) delete loadingSessions[taskSid];
+      updateLoadingUI();
+      return;
+    }
+    const data = await r.json();
+    taskId = data.task_id;
+    let done = false;
+    while (!done) {
+      const s = await fetch('/api/status/' + taskId);
+      const st = await s.json();
+      if (taskSid === currentSid) {
+        addStatus(st.message || 'Working...');
+      }
+      if (st.status === 'done') {
+        removeStatus();
+        if (taskSid === currentSid) {
+          addMsg('bot', st.response, null, st.image, st.gen_prompt, st.tools_used, st._image_model, st._search_details);
+          updateTokenIndicator(st.token_estimate || 0);
+          const tpsEl = document.getElementById('model-tps');
+          if (st.predicted_per_second != null) {
+            if (st.predicted_per_second < 5) {
+              tpsEl.innerHTML = '<span style="color:#f87171">&#9888; ' + st.predicted_per_second.toFixed(1) + ' t/s</span>';
+            } else {
+              tpsEl.textContent = st.predicted_per_second.toFixed(1) + ' t/s';
+            }
+          }
+        }
+        done = true;
+      } else if (st.status === 'error') {
+        removeStatus();
+        if (taskSid === currentSid) {
+          addMsg('bot', 'Error: ' + st.error);
+        }
+        done = true;
+      } else {
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+  } catch(e) {
+    if (taskSid === currentSid) {
+      removeStatus();
+      addMsg('bot', 'Error: ' + e.message);
+    }
+  }
+  loadingSessions[taskSid]--;
+  if (!loadingSessions[taskSid]) delete loadingSessions[taskSid];
+  updateLoadingUI();
+  sessionsList = await fetchSessions();
+  renderSessions();
+}
+
+init();
+</script>
+</body>
+</html>
