@@ -10,7 +10,7 @@ SEARXNG_URL = "http://localhost:8080/search"
 COMFYUI_URL = "http://localhost:8188"
 HOST, PORT = "0.0.0.0", 9000
 
-with open(os.path.expanduser("~/local-ai-files/model.txt"), 'r') as file:
+with open(os.path.expanduser("~/local-ai-files/model.txt"), "r") as file:
     MODEL_ID = file.read()
 
 COMFYUI_OUTPUT = os.path.expanduser("~/local-ai-files/ComfyUI/output")
@@ -19,20 +19,28 @@ IMG_PATH = os.path.expanduser("~/local-ai-files/ComfyUI/output")
 PROMPT_PATH = os.path.expanduser("~/local-ai-files/sys_prompt.txt")
 
 IMAGE_MODELS = {
+    "sd3_5_medium": {
+        "unet": "sd3.5_medium-Q4_K_M.gguf",
+        "clip1": "clip_l.safetensors",
+        "clip2": "clip_g.safetensors",
+        "t5": "t5-v1_1-xxl-encoder-Q4_K_M.gguf",
+        "vae": "sd3_vae.safetensors",
+        "description": "High-quality Stable Diffusion 3.5 Medium. Can draw or generate any kind of photo. High Quality but Slow.",
+    },
     "realistic": {
         "ckpt": "Realistic_Vision_V6.0_NV_B1_fp16.safetensors",
         "vae": "vae-ft-mse-840000-ema-pruned.safetensors",
-        "description": "Hyper-realistic photos and lifelike images",
+        "description": "Hyper-realistic photos and lifelike images. Moderately fast but not the best quality.",
     },
     "sketch": {
         "ckpt": "dreamshaper_8.safetensors",
         "vae": "vae-ft-mse-840000-ema-pruned.safetensors",
-        "description": "Pencil sketches, line art, and artistic drawings (prompt with 'pencil sketch')",
+        "description": "Pencil sketches, line art, and artistic drawings (prompt with 'pencil sketch'). Fast and good.",
     },
     "ghibli": {
         "ckpt": "ghibli_diffusion_v1.ckpt",
         "vae": "vae-ft-mse-840000-ema-pruned.safetensors",
-        "description": "Studio Ghibli style anime illustrations (prompt with 'ghibli style')",
+        "description": "Studio Ghibli style anime illustrations (prompt with 'ghibli style'). Fast but not the best.",
     },
 }
 
@@ -86,13 +94,13 @@ TOOLS = [
 ]
 
 
-with open(PROMPT_PATH, 'r') as file:
+with open(PROMPT_PATH, "r") as file:
     SYS_CONTENT = file.read()
 model_list = "; ".join(f"{k}: {v['description']}" for k, v in IMAGE_MODELS.items())
 SYS_CONTENT = SYS_CONTENT.replace("%model_list%", model_list)
 SYS_CONTENT = SYS_CONTENT.replace("%_image_keys%", str(list(IMAGE_MODELS.keys())))
 
-print("Prompt:\n", "*"*80, "\n", SYS_CONTENT, "\n",  "*"*80)
+print("Prompt:\n", "*" * 80, "\n", SYS_CONTENT, "\n", "*" * 80)
 
 sessions = {}
 sessions_meta = {}
@@ -290,7 +298,7 @@ def web_search(query):
     )
 
 
-def generate_image(prompt, task_id, negative_prompt="", model="realistic"):
+def generate_image(prompt, task_id, negative_prompt="", model="sd3_5_medium"):
     global model_status
     print(f"\n[image] Generating image for task {task_id} with the prompt: {prompt}")
     set_status(task_id, "Freeing VRAM for image generation...")
@@ -298,50 +306,101 @@ def generate_image(prompt, task_id, negative_prompt="", model="realistic"):
 
     gen_tag = str(uuid.uuid4())[:8]
     prefix = f"gen_{gen_tag}_"
-    cfg = IMAGE_MODELS.get(model, IMAGE_MODELS["realistic"])
+    cfg = IMAGE_MODELS.get(model, IMAGE_MODELS["sd3_5_medium"])
 
-    workflow = {
-        "3": {
-            "class_type": "KSampler",
-            "inputs": {
-                "seed": random.randint(0, 2**31),
-                "steps": 20,
-                "cfg": 7,
-                "sampler_name": "euler",
-                "scheduler": "normal",
-                "denoise": 1,
-                "model": ["4", 0],
-                "positive": ["6", 0],
-                "negative": ["7", 0],
-                "latent_image": ["5", 0],
+    if model == "sd3_5_medium":
+        print("Chose SD 3.5 for image generation")
+        workflow = {
+            "1": {"class_type": "UnetLoaderGGUF", "inputs": {"unet_name": cfg["unet"]}},
+            "2": {
+                "class_type": "TripleCLIPLoaderGGUF",
+                "inputs": {
+                    "clip_name1": cfg["clip1"],
+                    "clip_name2": cfg["clip2"],
+                    "clip_name3": cfg["t5"],
+                    "type": "sd3",
+                },
             },
-        },
-        "4": {
-            "class_type": "CheckpointLoaderSimple",
-            "inputs": {"ckpt_name": cfg["ckpt"]},
-        },
-        "5": {
-            "class_type": "EmptyLatentImage",
-            "inputs": {"width": 512, "height": 512, "batch_size": 1},
-        },
-        "6": {
-            "class_type": "CLIPTextEncode",
-            "inputs": {"text": prompt, "clip": ["4", 1]},
-        },
-        "7": {
-            "class_type": "CLIPTextEncode",
-            "inputs": {"text": negative_prompt, "clip": ["4", 1]},
-        },
-        "8": {
-            "class_type": "VAEDecode",
-            "inputs": {"samples": ["3", 0], "vae": ["10", 0]},
-        },
-        "9": {
-            "class_type": "SaveImage",
-            "inputs": {"filename_prefix": prefix, "images": ["8", 0]},
-        },
-        "10": {"class_type": "VAELoader", "inputs": {"vae_name": cfg["vae"]}},
-    }
+            "3": {
+                "class_type": "CLIPTextEncode",
+                "inputs": {"text": prompt, "clip": ["2", 0]},
+            },
+            "4": {
+                "class_type": "CLIPTextEncode",
+                "inputs": {"text": negative_prompt, "clip": ["2", 0]},
+            },
+            "5": {
+                "class_type": "EmptySD3LatentImage",
+                "inputs": {"width": 1024, "height": 1024, "batch_size": 1},
+            },
+            "6": {
+                "class_type": "KSampler",
+                "inputs": {
+                    "seed": random.randint(0, 2**31),
+                    "steps": 20,  # Recommended steps for SD 3.5 Medium
+                    "cfg": 4.5,  # Recommended CFG range for SD 3.5 Medium: 3.5 to 5.0
+                    "sampler_name": "euler",
+                    "scheduler": "sgm_uniform",
+                    "denoise": 1.0,
+                    "model": ["1", 0],
+                    "positive": ["3", 0],
+                    "negative": ["4", 0],
+                    "latent_image": ["5", 0],
+                },
+            },
+            "7": {"class_type": "VAELoader", "inputs": {"vae_name": cfg["vae"]}},
+            "8": {
+                "class_type": "VAEDecode",
+                "inputs": {"samples": ["6", 0], "vae": ["7", 0]},
+            },
+            "9": {
+                "class_type": "SaveImage",
+                "inputs": {"filename_prefix": prefix, "images": ["8", 0]},
+            },
+        }
+    else:
+        workflow = {
+            "3": {
+                "class_type": "KSampler",
+                "inputs": {
+                    "seed": random.randint(0, 2**31),
+                    "steps": 20,
+                    "cfg": 7,
+                    "sampler_name": "euler",
+                    "scheduler": "normal",
+                    "denoise": 1,
+                    "model": ["4", 0],
+                    "positive": ["6", 0],
+                    "negative": ["7", 0],
+                    "latent_image": ["5", 0],
+                },
+            },
+            "4": {
+                "class_type": "CheckpointLoaderSimple",
+                "inputs": {"ckpt_name": cfg["ckpt"]},
+            },
+            "5": {
+                "class_type": "EmptyLatentImage",
+                "inputs": {"width": 512, "height": 512, "batch_size": 1},
+            },
+            "6": {
+                "class_type": "CLIPTextEncode",
+                "inputs": {"text": prompt, "clip": ["4", 1]},
+            },
+            "7": {
+                "class_type": "CLIPTextEncode",
+                "inputs": {"text": negative_prompt, "clip": ["4", 1]},
+            },
+            "8": {
+                "class_type": "VAEDecode",
+                "inputs": {"samples": ["3", 0], "vae": ["10", 0]},
+            },
+            "9": {
+                "class_type": "SaveImage",
+                "inputs": {"filename_prefix": prefix, "images": ["8", 0]},
+            },
+            "10": {"class_type": "VAELoader", "inputs": {"vae_name": cfg["vae"]}},
+        }
 
     model_status = "image_active"
     tasks[task_id]["gen_prompt"] = prompt
@@ -406,7 +465,6 @@ def process_task(task_id, sid, user_message, image_b64):
         sessions[sid][0]["content"] = full_sys_content
     else:
         sessions[sid].insert(0, {"role": "system", "content": full_sys_content})
-
 
     if sid not in sessions_meta:
         sessions_meta[sid] = {
@@ -496,11 +554,11 @@ def process_task(task_id, sid, user_message, image_b64):
                         pass
                 elif tool_name == "generate_image":
                     result = generate_image(
-                        args["prompt"],
-                        task_id,
-                        args.get("negative_prompt", ""),
-                        args.get("model", "realistic"),
-                    )
+                                prompt=args["prompt"],
+                                task_id=task_id,
+                                negative_prompt=args.get("negative_prompt", ""),
+                                model=args.get("model") or "sd3_5_medium",
+                            )
 
                 sessions[sid].append(
                     {"role": "tool", "tool_call_id": tc["id"], "content": result}
