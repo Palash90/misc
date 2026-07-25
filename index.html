@@ -695,6 +695,103 @@
       pointer-events: none
     }
 
+    #login-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #0f0f1a;
+      z-index: 300;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn .3s ease
+    }
+
+    #login-overlay.hidden {
+      display: none
+    }
+
+    .login-box {
+      background: rgba(22, 22, 42, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      padding: 40px;
+      width: 340px;
+      box-shadow: 0 8px 48px rgba(0, 0, 0, 0.4)
+    }
+
+    .login-box h2 {
+      margin-bottom: 24px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 22px
+    }
+
+    .login-box input {
+      width: 100%;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.04);
+      color: #e0e0e0;
+      font-size: 14px;
+      outline: none;
+      font-family: inherit;
+      box-sizing: border-box
+    }
+
+    .login-box input:focus {
+      border-color: rgba(74, 108, 247, 0.5)
+    }
+
+    .login-box button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, #4a6cf7, #6a4cf7);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+      margin-top: 4px
+    }
+
+    .login-box button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(74, 108, 247, 0.35)
+    }
+
+    .login-box .login-error {
+      color: #f87171;
+      font-size: 13px;
+      text-align: center;
+      margin-top: 10px;
+      display: none
+    }
+
+    .login-box .login-error.show {
+      display: block
+    }
+
+    #logout-btn {
+      background: none;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #f87171;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all .2s;
+      margin-left: auto
+    }
+
+    #logout-btn:hover {
+      background: rgba(248, 113, 113, 0.1);
+      border-color: #f87171
+    }
+
     #overload-warn {
       animation: pulseWarn 1.5s ease-in-out infinite alternate
     }
@@ -725,6 +822,7 @@
     <span id="model-label"></span>
     <span id="model-tps" style="margin-left:12px;font-size:12px;color:#888"></span>
     <span id="token-indicator" style="margin-left:auto;font-size:12px;color:#666"></span>
+    <button id="logout-btn" onclick="doLogout()">Logout</button>
   </div>
   <div id="overload-warn"
     style="display:none;background:#991b1b;color:#fff;text-align:center;padding:6px 12px;font-size:13px;font-weight:500">
@@ -742,6 +840,15 @@
     <div class="img-wrap"><img id="fullscreen-img"></div>
     <div class="zoom-label" id="zoom-label">100%</div>
   </div>
+  <div id="login-overlay">
+    <div class="login-box">
+      <h2>Local AI</h2>
+      <input type="text" id="login-username" placeholder="Username" autocomplete="username">
+      <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
+      <button onclick="doLogin()">Sign In</button>
+      <div class="login-error" id="login-error">Invalid username or password</div>
+    </div>
+  </div>
 
   <script>
     marked.setOptions({ breaks: true, gfm: true });
@@ -755,6 +862,59 @@
     let attachedFileText = null;
     let loadingSessions = {};
     var _pendingMsgs = {};
+    let authToken = localStorage.getItem('auth_token') || '';
+
+    function authFetch(url, options) {
+      options = options || {};
+      options.headers = options.headers || {};
+      if (authToken) {
+        options.headers['X-Auth-Token'] = authToken;
+      }
+      return fetch(url, options);
+    }
+
+    async function doLogin() {
+      const username = document.getElementById('login-username').value.trim();
+      const password = document.getElementById('login-password').value;
+      if (!username || !password) return;
+      try {
+        const r = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await r.json();
+        if (data.token) {
+          authToken = data.token;
+          localStorage.setItem('auth_token', authToken);
+          document.getElementById('login-overlay').classList.add('hidden');
+          document.getElementById('login-username').value = '';
+          document.getElementById('login-password').value = '';
+          document.getElementById('login-error').classList.remove('show');
+          initChat();
+        } else {
+          document.getElementById('login-error').classList.add('show');
+        }
+      } catch (e) {
+        document.getElementById('login-error').classList.add('show');
+      }
+    }
+
+    function doLogout() {
+      authFetch('/api/logout', { method: 'POST' }).catch(function(){});
+      authToken = '';
+      localStorage.removeItem('auth_token');
+      document.getElementById('login-overlay').classList.remove('hidden');
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebar-overlay').classList.remove('open');
+      currentSid = null;
+      sessionsList = [];
+      chat.innerHTML = '';
+    }
+
+    document.getElementById('login-password').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') doLogin();
+    });
 
     const CODE_EXTS = new Set([".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".cpp", ".c", ".h", ".hpp", ".cs", ".go", ".rs", ".rb", ".php", ".swift", ".kt", ".scala", ".dart", ".sh", ".bash", ".pl", ".pm", ".lua", ".r", ".sql", ".html", ".css", ".scss", ".sass", ".less", ".vue", ".svelte", ".yaml", ".yml", ".json", ".xml", ".toml", ".ini", ".cfg", ".md", ".tex", ".dockerfile", ".tf", ".zig", ".nim", ".hs", ".ml", ".fs", ".erl", ".elm", ".purs", ".nix", ".ps1", ".bat", ".cmake", ".proto", ".gradle", ".tex", ".cls", ".sty", ".tex", ".bib"]);
     const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -821,7 +981,7 @@
         reader.onload = async function (ev) {
           const b64 = ev.target.result.split(',')[1];
           try {
-            const r = await fetch('/api/extract-file', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: file.name, data: b64 }) });
+            const r = await authFetch('/api/extract-file', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: file.name, data: b64 }) });
             const data = await r.json();
             if (data.text) {
               attachedFileName = file.name;
@@ -1225,7 +1385,7 @@
     }
 
     async function fetchSessions() {
-      const r = await fetch('/api/sessions');
+      const r = await authFetch('/api/sessions');
       return await r.json();
     }
 
@@ -1234,7 +1394,7 @@
       localStorage.setItem('last_sid', sid);
       updateLoadingUI();
       try {
-        const r = await fetch('/api/sessions/' + sid + '/messages');
+        const r = await authFetch('/api/sessions/' + sid + '/messages');
         const data = await r.json();
         chat.innerHTML = '';
         data.messages.forEach(renderMessage);
@@ -1247,7 +1407,7 @@
     }
 
     async function newChat() {
-      const r = await fetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'New Chat' }) });
+      const r = await authFetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'New Chat' }) });
       const data = await r.json();
       currentSid = data.session_id;
       localStorage.setItem('last_sid', currentSid);
@@ -1261,7 +1421,7 @@
 
     async function deleteSession(sid) {
       if (!confirm('Delete this session?')) return;
-      await fetch('/api/sessions/' + sid, { method: 'DELETE' });
+      await authFetch('/api/sessions/' + sid, { method: 'DELETE' });
       sessionsList = await fetchSessions();
       if (sid === currentSid) {
         if (sessionsList.length > 0) {
@@ -1279,7 +1439,7 @@
       const newName = prompt('Session name:', s ? s.name : '');
       if (!newName || newName.trim() === '') return;
       const prevSid = currentSid;
-      await fetch('/api/sessions/' + sid, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName.trim() }) });
+      await authFetch('/api/sessions/' + sid, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName.trim() }) });
       sessionsList = await fetchSessions();
       currentSid = prevSid;
       renderSessions();
@@ -1331,7 +1491,7 @@
       });
     }
 
-    async function init() {
+    async function initChat() {
       sessionsList = await fetchSessions();
       const lastSid = localStorage.getItem('last_sid');
       if (lastSid && sessionsList.some(function (s) { return s.session_id === lastSid; })) {
@@ -1342,6 +1502,22 @@
         await newChat();
       }
       resumePendingTasks();
+    }
+
+    async function init() {
+      if (authToken) {
+        try {
+          const r = await fetch('/api/check-auth');
+          const data = await r.json();
+          if (data.authenticated) {
+            document.getElementById('login-overlay').classList.add('hidden');
+            initChat();
+            return;
+          }
+        } catch (e) {}
+      }
+      localStorage.removeItem('auth_token');
+      authToken = '';
     }
 
     async function send() {
@@ -1361,7 +1537,7 @@
 
       let taskId = null;
       try {
-        const r = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: currentSid, message: finalText, image: img }) });
+        const r = await authFetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: currentSid, message: finalText, image: img }) });
         if (r.status === 503) {
           const errData = await r.json();
           addMsg('bot', errData.error || 'Server is busy. Please try again.');

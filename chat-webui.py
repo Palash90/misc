@@ -32,7 +32,7 @@ LLAMA_SERVER_ARGS = [
     "--models-dir",
     os.path.expanduser("~/local-ai-files/my-models/"),
     "--n-gpu-layers",
-    "99", # Have to make it dynamic for Qwen switch
+    "99",  # Have to make it dynamic for Qwen switch
     "--no-kv-offload",
     "--ctx-size",
     "32768",
@@ -136,6 +136,21 @@ SYS_CONTENT = SYS_CONTENT.replace("%_image_keys%", str(list(IMAGE_MODELS.keys())
 
 print("Prompt:\n", "*" * 80, "\n", SYS_CONTENT, "\n", "*" * 80)
 
+USERS = {
+    "palash": "palash90Admin",
+    "totan": "totan93",
+}
+
+_active_tokens = {}
+_tokens_lock = threading.Lock()
+
+
+def get_current_user(headers):
+    token = headers.get("X-Auth-Token", "")
+    with _tokens_lock:
+        return _active_tokens.get(token)
+
+
 sessions = {}
 sessions_meta = {}
 tasks = {}
@@ -180,6 +195,7 @@ def load_sessions():
                     "name": sdata.get("name", "Chat"),
                     "created": sdata.get("created", time.time()),
                     "updated": sdata.get("updated", time.time()),
+                    "user_id": sdata.get("user_id", ""),
                 }
     except (FileNotFoundError, json.JSONDecodeError):
         with _data_lock:
@@ -198,6 +214,7 @@ def save_sessions():
                 "name": meta["name"],
                 "created": meta["created"],
                 "updated": meta["updated"],
+                "user_id": meta.get("user_id", ""),
                 "messages": sessions[sid],
             }
     with open(SESSIONS_FILE, "w") as f:
@@ -1423,8 +1440,23 @@ def extract_file_text(name, data_b64):
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header(
+            "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS"
+        )
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Auth-Token")
+        self.end_headers()
+
     def do_GET(self):
-        if self.path == "/api/model-status":
+        if self.path == "/api/check-auth":
+            user = get_current_user(self.headers)
+            if user:
+                self.send_json({"authenticated": True, "username": user})
+            else:
+                self.send_json({"authenticated": False})
+        elif self.path == "/api/model-status":
             with _data_lock:
                 ms, tps, oh, gtemp = model_status, _last_tps, _overheated, _gpu_temp
             self.send_json(
@@ -1456,6 +1488,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 )
             self.send_json(status)
         elif self.path == "/api/sessions":
+            user = get_current_user(self.headers)
+            if not user:
+                self.send_json([], status=401)
+                return
             with _data_lock:
                 sorted_items = sorted(
                     sessions_meta.items(),
@@ -1471,11 +1507,20 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         "token_estimate": estimate_tokens(sessions.get(sid, [])),
                     }
                     for sid, meta in sorted_items
+                    if meta.get("user_id", "") == user
                 ]
             self.send_json(result)
         elif self.path.startswith("/api/sessions/") and self.path.endswith("/messages"):
+            user = get_current_user(self.headers)
+            if not user:
+                self.send_json({"error": "Unauthorized"}, status=401)
+                return
             sid = self.path.split("/")[3]
             with _data_lock:
+                meta = sessions_meta.get(sid)
+                if not meta or meta.get("user_id", "") != user:
+                    self.send_error(404)
+                    return
                 msgs = sessions.get(sid)
             if msgs is not None:
                 self.send_json(
@@ -1496,8 +1541,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def do_DELETE(self):
         if self.path.startswith("/api/sessions/"):
+            user = get_current_user(self.headers)
+            if not user:
+                self.send_json({"error": "Unauthorized"}, status=401)
+                return
             sid = self.path.split("/")[3]
             with _data_lock:
+                meta = sessions_meta.get(sid)
+                if not meta or meta.get("user_id", "") != user:
+                    self.send_error(404)
+                    return
                 msgs = list(sessions.get(sid, []))
             for msg in msgs:
                 if msg.get("role") == "assistant":
@@ -1522,12 +1575,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def do_PUT(self):
         if self.path.startswith("/api/sessions/"):
+            user = get_current_user(self.headers)
+            if not user:
+                self.send_json({"error": "Unauthorized"}, status=401)
+                return
             sid = self.path.split("/")[3]
             length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(length))
             with _data_lock:
                 meta = sessions_meta.get(sid)
-                if meta:
+                if meta and meta.get("user_id", "") == user:
                     meta["name"] = body.get("name", meta["name"])
                     meta["updated"] = time.time()
             if meta:
@@ -1539,12 +1596,37 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_error(404)
 
     def do_POST(self):
-        if self.path == "/api/chat":
+        if self.path == "/api/login":
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(length))
+            username = body.get("username", "")
+            password = body.get("password", "")
+            if username in USERS and USERS[username] == password:
+                token = str(uuid.uuid4())
+                with _tokens_lock:
+                    _active_tokens[token] = username
+                self.send_json({"token": token, "username": username})
+            else:
+                self.send_json({"error": "Invalid credentials"}, status=401)
+        elif self.path == "/api/logout":
+            token = self.headers.get("X-Auth-Token", "")
+            with _tokens_lock:
+                _active_tokens.pop(token, None)
+            self.send_json({"ok": True})
+        elif self.path == "/api/chat":
+            user = get_current_user(self.headers)
+            if not user:
+                self.send_json({"error": "Unauthorized"}, status=401)
+                return
             length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(length))
             task_id = str(uuid.uuid4())
             sid = body.get("session_id", "default")
             with _data_lock:
+                meta = sessions_meta.get(sid)
+                if not meta or meta.get("user_id", "") != user:
+                    self.send_json({"error": "Session not found"}, status=404)
+                    return
                 if _overheated:
                     self.send_json(
                         {
@@ -1584,6 +1666,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     {"error": "Could not extract text from file"}, status=400
                 )
         elif self.path == "/api/sessions":
+            user = get_current_user(self.headers)
+            if not user:
+                self.send_json({"error": "Unauthorized"}, status=401)
+                return
             sid = str(uuid.uuid4())
             now = time.time()
             with _data_lock:
@@ -1592,6 +1678,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     "name": "New Chat",
                     "created": now,
                     "updated": now,
+                    "user_id": user,
                 }
             save_sessions()
             self.send_json({"session_id": sid})
