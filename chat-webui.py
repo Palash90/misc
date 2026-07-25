@@ -46,6 +46,7 @@ LLAMA_QWEN_ARGS = [
 ]
 SESSIONS_FILE = os.path.expanduser("~/local-ai-files/sessions.json")
 IMG_PATH = os.path.expanduser("~/local-ai-files/ComfyUI/output")
+COMFYUI_INPUT = os.path.expanduser("~/local-ai-files/ComfyUI/input")
 PROMPT_PATH = os.path.expanduser("~/local-ai-files/sys_prompt.txt")
 
 with open(
@@ -440,6 +441,8 @@ def restart_servers():
             "main.py",
             "--output-directory",
             COMFYUI_OUTPUT,
+            "--input-directory",
+            COMFYUI_INPUT,
             "--lowvram",
         ],
         cwd=COMFYUI_DIR,
@@ -723,12 +726,7 @@ def edit_image(
     prefix = f"edit_{gen_tag}_"
     input_filename = f"input_{gen_tag}.png"
 
-    try:
-        import folder_paths
-
-        input_dir = folder_paths.get_input_directory()
-    except Exception:
-        input_dir = os.path.join(COMFYUI_DIR, "input")
+    input_dir = COMFYUI_INPUT
     os.makedirs(input_dir, exist_ok=True)
     input_filepath = os.path.join(input_dir, input_filename)
 
@@ -836,8 +834,9 @@ def edit_image(
 
             if found_file:
                 tasks[task_id]["image_file"] = found_file
+                tasks[task_id]["_input_image"] = input_filepath
                 set_status(task_id, f"Edited image saved as {found_file}")
-                result = json.dumps({"prompt_id": prompt_id, "file": found_file})
+                result = json.dumps({"prompt_id": prompt_id, "file": found_file, "input_file": input_filepath})
             else:
                 result = json.dumps({"error": "Image editing timeout"})
     except Exception as e:
@@ -922,11 +921,13 @@ def _tool_worker(task_id, sid, tc, image_b64, round_num, tool_index):
                 t = tasks.get(task_id)
                 if t:
                     t.setdefault("_tools_used", []).append(tool_name)
+            input_image_path = res_data.get("input_file", "")
             msg_entry = {
                 "role": "assistant",
                 "content": "Here is your generated image:",
                 "_tools_used": tu + [tool_name],
                 "_image_url": image_url,
+                "_input_image": input_image_path,
                 "_gen_prompt": args.get("prompt", ""),
                 "_image_model": None,
             }
@@ -942,6 +943,7 @@ def _tool_worker(task_id, sid, tc, image_b64, round_num, tool_index):
                 tools_used=tu + [tool_name],
                 gen_prompt=args.get("prompt", ""),
                 image_model=None,
+                input_image=input_image_path,
                 sid=sid,
             )
         else:
@@ -1230,6 +1232,7 @@ def _event_loop():
             tools_used = data["tools_used"]
             gen_prompt = data["gen_prompt"]
             image_model = data.get("image_model")
+            input_image = data.get("input_image", "")
             with _data_lock:
                 if task_id in tasks:
                     tasks[task_id] = {
@@ -1238,6 +1241,7 @@ def _event_loop():
                         "session_id": sid,
                         "image": image_url,
                         "_image_url": image_url,
+                        "_input_image": input_image,
                         "tools_used": tools_used,
                         "gen_prompt": gen_prompt,
                         "_image_model": image_model,
@@ -1560,6 +1564,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         fpath = os.path.join(IMG_PATH, fname)
                         if os.path.exists(fpath):
                             os.remove(fpath)
+                    input_path = msg.get("_input_image", "") or ""
+                    if input_path and os.path.exists(input_path):
+                        os.remove(input_path)
             with _data_lock:
                 exists = sid in sessions
                 if exists:

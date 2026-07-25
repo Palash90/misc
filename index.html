@@ -1507,7 +1507,7 @@
     async function init() {
       if (authToken) {
         try {
-          const r = await fetch('/api/check-auth');
+          const r = await authFetch('/api/check-auth');
           const data = await r.json();
           if (data.authenticated) {
             document.getElementById('login-overlay').classList.add('hidden');
