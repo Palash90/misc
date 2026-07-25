@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import http.server, json, os, uuid, base64, mimetypes, requests, subprocess, time, random, threading, sys, io, tempfile, queue as _queue_mod
+
 sys.stdout.reconfigure(line_buffering=True)  # noqa
 from datetime import datetime
 from urllib.parse import urlparse, parse_qs
@@ -16,40 +17,41 @@ with open(os.path.expanduser("~/local-ai-files/model.txt"), "r") as file:
     MODEL_ID = file.read()
 
 import sys
+
 COMFYUI_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ComfyUI")
 sys.path.insert(0, COMFYUI_DIR)
 COMFYUI_OUTPUT = os.path.expanduser("~/local-ai-files/ComfyUI/output")
 LLAMA_SERVER_PATH = os.path.expanduser("~/local-ai/llama.cpp/build/bin/llama-server")
-LLAMA_SERVER_ARGS = ["--host", "0.0.0.0", "--port", "8081", "--models-dir", os.path.expanduser("~/local-ai-files/my-models/"), "--n-gpu-layers", "12", "--no-kv-offload", "--cache-type-k", "q8_0", "--cache-type-v", "q8_0", "--ctx-size", "16384"]
+LLAMA_QWEN_NGL = "12"
+LLAMA_GEMMA_NGL = "99"
+LLAMA_SERVER_ARGS = [
+    "--host",
+    "0.0.0.0",
+    "--port",
+    "8081",
+    "--models-dir",
+    os.path.expanduser("~/local-ai-files/my-models/"),
+    "--n-gpu-layers",
+    "99", # Have to make it dynamic for Qwen switch
+    "--no-kv-offload",
+    "--ctx-size",
+    "32768",
+]
+
+LLAMA_QWEN_ARGS = [
+    "--cache-type-k",
+    "q8_0",
+    "--cache-type-v",
+    "q8_0",
+]
 SESSIONS_FILE = os.path.expanduser("~/local-ai-files/sessions.json")
 IMG_PATH = os.path.expanduser("~/local-ai-files/ComfyUI/output")
 PROMPT_PATH = os.path.expanduser("~/local-ai-files/sys_prompt.txt")
 
-IMAGE_MODELS = {
-    "sd3_5_medium": {
-        "unet": "sd3.5_medium-Q4_K_M.gguf",
-        "clip1": "clip_l.safetensors",
-        "clip2": "clip_g.safetensors",
-        "t5": "t5-v1_1-xxl-encoder-Q4_K_M.gguf",
-        "vae": "sd3_vae.safetensors",
-        "description": "High-quality Stable Diffusion 3.5 Medium. Can edit and draw or generate any kind of photo. High Quality but Slow.",
-    },
-    "realistic": {
-        "ckpt": "Realistic_Vision_V6.0_NV_B1_fp16.safetensors",
-        "vae": "vae-ft-mse-840000-ema-pruned.safetensors",
-        "description": "Hyper-realistic photos and lifelike images. Moderately fast but not the best quality.",
-    },
-    "sketch": {
-        "ckpt": "dreamshaper_8.safetensors",
-        "vae": "vae-ft-mse-840000-ema-pruned.safetensors",
-        "description": "Pencil sketches, line art, and artistic drawings (prompt with 'pencil sketch'). Fast and good.",
-    },
-    "ghibli": {
-        "ckpt": "ghibli_diffusion_v1.ckpt",
-        "vae": "vae-ft-mse-840000-ema-pruned.safetensors",
-        "description": "Studio Ghibli style anime illustrations (prompt with 'ghibli style'). Fast but not the best.",
-    },
-}
+with open(
+    os.path.expanduser("~/local-ai-files/models.json"), "r", encoding="utf-8"
+) as file:
+    IMAGE_MODELS = json.load(file)
 
 TOOLS = [
     {
@@ -102,24 +104,24 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "edit_image",
-            "description": "Edit or modify an existing image (Img2Img). Use this when the user asks to change, restyle, recolor, add to, or modify a previously generated image OR an uploaded image.",
+            "description": "Generic Img2Img image editor to modify, restyle, recolor, add elements, or transform existing or uploaded images.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "prompt": {
                         "type": "string",
-                        "description": "Detailed visual description of what the edited image should look like.",
+                        "description": "Complete description of what the edited image should look like.",
                     },
                     "negative_prompt": {
                         "type": "string",
-                        "description": "Things to avoid in the edited image.",
+                        "description": "Elements to exclude from the visual generation.",
                     },
                     "denoise": {
                         "type": "number",
-                        "description": "Denoising strength between 0.1 and 1.0. Use 0.3-0.5 for subtle edits/recoloring, 0.5-0.7 for strong edits maintaining structure, and 0.7-0.9 for heavy transformations.",
+                        "description": "Denoising value (0.1 to 1.0). Use 0.25-0.4 for subtle color/lighting changes, 0.45-0.65 for structural edits and object additions, and 0.7-0.85 for massive re-imaginings.",
                     },
                 },
-                "required": ["prompt"],
+                "required": ["prompt", "denoise"],
             },
         },
     },
@@ -149,7 +151,7 @@ _queue_lock = threading.Lock()
 _queue_cond = threading.Condition(_queue_lock)
 _current_task_id = None
 
-MAX_INPUT_TOKENS = 3000
+MAX_INPUT_TOKENS = 4096
 
 _event_queue = _queue_mod.Queue()
 _llm_pool = ThreadPoolExecutor(max_workers=1)
@@ -269,7 +271,7 @@ def unload_llama_model():
 
 
 def load_llama_model():
-    global model_status
+    global model_status, _last_llm_use
     with _data_lock:
         model_status = "loading"
     print(f"[llama] Sending load request for model '{MODEL_ID}'...")
@@ -283,6 +285,7 @@ def load_llama_model():
                     print(f"[llama] Model ready (attempt {i+1})")
                     with _data_lock:
                         model_status = "chat_loaded"
+                        _last_llm_use = time.time()  # Reset idle timer upon loading
                     return True
                 time.sleep(2)
         else:
@@ -294,11 +297,59 @@ def load_llama_model():
     if is_llama_alive():
         with _data_lock:
             model_status = "chat_loaded"
+            _last_llm_use = time.time()  # Reset idle timer upon loading
         return True
 
     with _data_lock:
         model_status = "unloaded"
     return False
+
+
+def _finalize_task(task_id, sid, msg_content, body):
+    global _last_tps, _last_llm_use
+    with _data_lock:
+        t = tasks.get(task_id)
+        if not t:
+            return
+        tools_used = list(t.get("_tools_used", []))
+        search_details = list(t.get("_search_details", []))
+        image_filename = t.get("image_file")
+        gen_prompt = t.get("gen_prompt")
+        image_model = t.get("_image_model")
+    image_url = f"/output/{image_filename}" if image_filename else None
+    timings = body.get("timings", {})
+    predicted_per_second = timings.get("predicted_per_second")
+    msg_entry = {
+        "role": "assistant",
+        "content": msg_content,
+        "_tools_used": tools_used,
+        "_image_url": image_url,
+        "_gen_prompt": gen_prompt,
+        "_image_model": image_model,
+        "_search_details": search_details,
+    }
+    with _data_lock:
+        if sid in sessions:
+            sessions[sid].append(msg_entry)
+            sessions_meta.setdefault(sid, {})["updated"] = time.time()
+        _last_tps = predicted_per_second
+        _last_llm_use = time.time()  # Reset idle timer when task finishes
+    save_sessions()
+    with _data_lock:
+        if task_id in tasks:
+            tasks[task_id] = {
+                "status": "done",
+                "response": msg_content,
+                "session_id": sid,
+                "token_estimate": estimate_tokens(sessions.get(sid, [])),
+                "predicted_per_second": predicted_per_second,
+                "tools_used": tools_used,
+                "image": image_url,
+                "_image_url": image_url,
+                "gen_prompt": gen_prompt,
+                "_image_model": image_model,
+                "_search_details": search_details,
+            }
 
 
 def free_comfyui_vram():
@@ -321,7 +372,9 @@ def get_gpu_temp():
     try:
         r = subprocess.run(
             ["nvidia-smi", "--query-gpu=temperature.gpu", "--format=csv,noheader"],
-            capture_output=True, text=True, timeout=5
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         return int(r.stdout.strip())
     except Exception:
@@ -358,8 +411,25 @@ def restart_servers():
     log_dir = os.path.expanduser("~/local-ai")
     llm_log = open(os.path.join(log_dir, "llama-server.log"), "a")
     comfy_log = open(os.path.join(log_dir, "comfyui.log"), "a")
-    subprocess.Popen([LLAMA_SERVER_PATH] + LLAMA_SERVER_ARGS, stdout=llm_log, stderr=llm_log, start_new_session=True)
-    subprocess.Popen([os.path.join(COMFYUI_DIR, "venv/bin/python"), "main.py", "--output-directory", COMFYUI_OUTPUT, "--lowvram"], cwd=COMFYUI_DIR, stdout=comfy_log, stderr=comfy_log, start_new_session=True)
+    subprocess.Popen(
+        [LLAMA_SERVER_PATH] + LLAMA_SERVER_ARGS,
+        stdout=llm_log,
+        stderr=llm_log,
+        start_new_session=True,
+    )
+    subprocess.Popen(
+        [
+            os.path.join(COMFYUI_DIR, "venv/bin/python"),
+            "main.py",
+            "--output-directory",
+            COMFYUI_OUTPUT,
+            "--lowvram",
+        ],
+        cwd=COMFYUI_DIR,
+        stdout=comfy_log,
+        stderr=comfy_log,
+        start_new_session=True,
+    )
     deadline = time.time() + 120
     while time.time() < deadline:
         time.sleep(2)
@@ -387,6 +457,7 @@ def web_search(query):
     search_url = f"{SEARXNG_URL}?{urlencode(params)}"
     print("Performing web search", search_url)
     r = requests.get(SEARXNG_URL, params=params, timeout=10)
+    print("Web-search completed")
     data = r.json()
     results = data.get("results", [])[:5]
     formatted = []
@@ -408,7 +479,7 @@ def web_search(query):
     )
 
 
-def generate_image(prompt, task_id, negative_prompt="", model="sd3_5_medium"):
+def generate_image(prompt, task_id, negative_prompt="", model="z_image"):
     global model_status
     print(f"\n[image] Generating image for task {task_id} with the prompt: {prompt}")
     set_status(task_id, "Freeing VRAM for image generation...")
@@ -416,9 +487,60 @@ def generate_image(prompt, task_id, negative_prompt="", model="sd3_5_medium"):
 
     gen_tag = str(uuid.uuid4())[:8]
     prefix = f"gen_{gen_tag}_"
-    cfg = IMAGE_MODELS.get(model, IMAGE_MODELS["sd3_5_medium"])
-
-    if model == "sd3_5_medium":
+    cfg = IMAGE_MODELS.get(model, IMAGE_MODELS["z_image"])
+    if model == "z_image":
+        print("Chose Z-Image Turbo for image generation")
+        workflow = {
+            "62": {
+                "class_type": "CLIPLoader",
+                "inputs": {"clip_name": cfg["clip1"], "type": "lumina2"},
+            },
+            "63": {"class_type": "VAELoader", "inputs": {"vae_name": cfg["vae"]}},
+            "66": {
+                "class_type": "UNETLoader",
+                "inputs": {"unet_name": cfg["unet"], "weight_dtype": "default"},
+            },
+            "67": {
+                "class_type": "CLIPTextEncode",
+                "inputs": {"text": prompt, "clip": ["62", 0]},
+            },
+            "68": {
+                "class_type": "EmptySD3LatentImage",
+                "inputs": {"width": 512, "height": 512, "batch_size": 1},
+            },
+            "69": {
+                "class_type": "ModelSamplingAuraFlow",
+                "inputs": {"shift": 3, "model": ["66", 0]},
+            },
+            "71": {
+                "class_type": "CLIPTextEncode",
+                "inputs": {"text": negative_prompt, "clip": ["62", 0]},
+            },
+            "70": {
+                "class_type": "KSampler",
+                "inputs": {
+                    "seed": random.randint(0, 2**31),
+                    "steps": 8,
+                    "cfg": 1.0,
+                    "sampler_name": "res_multistep",
+                    "scheduler": "simple",
+                    "denoise": 1.0,
+                    "model": ["69", 0],
+                    "positive": ["67", 0],
+                    "negative": ["71", 0],
+                    "latent_image": ["68", 0],
+                },
+            },
+            "65": {
+                "class_type": "VAEDecode",
+                "inputs": {"samples": ["70", 0], "vae": ["63", 0]},
+            },
+            "9": {
+                "class_type": "SaveImage",
+                "inputs": {"filename_prefix": prefix, "images": ["65", 0]},
+            },
+        }
+    elif model == "sd3_5_medium":
         print("Chose SD 3.5 for image generation")
         workflow = {
             "1": {"class_type": "UnetLoaderGGUF", "inputs": {"unet_name": cfg["unet"]}},
@@ -469,48 +591,7 @@ def generate_image(prompt, task_id, negative_prompt="", model="sd3_5_medium"):
             },
         }
     else:
-        workflow = {
-            "3": {
-                "class_type": "KSampler",
-                "inputs": {
-                    "seed": random.randint(0, 2**31),
-                    "steps": 20,
-                    "cfg": 7,
-                    "sampler_name": "euler",
-                    "scheduler": "normal",
-                    "denoise": 1,
-                    "model": ["4", 0],
-                    "positive": ["6", 0],
-                    "negative": ["7", 0],
-                    "latent_image": ["5", 0],
-                },
-            },
-            "4": {
-                "class_type": "CheckpointLoaderSimple",
-                "inputs": {"ckpt_name": cfg["ckpt"]},
-            },
-            "5": {
-                "class_type": "EmptyLatentImage",
-                "inputs": {"width": 512, "height": 512, "batch_size": 1},
-            },
-            "6": {
-                "class_type": "CLIPTextEncode",
-                "inputs": {"text": prompt, "clip": ["4", 1]},
-            },
-            "7": {
-                "class_type": "CLIPTextEncode",
-                "inputs": {"text": negative_prompt, "clip": ["4", 1]},
-            },
-            "8": {
-                "class_type": "VAEDecode",
-                "inputs": {"samples": ["3", 0], "vae": ["10", 0]},
-            },
-            "9": {
-                "class_type": "SaveImage",
-                "inputs": {"filename_prefix": prefix, "images": ["8", 0]},
-            },
-            "10": {"class_type": "VAELoader", "inputs": {"vae_name": cfg["vae"]}},
-        }
+        print("No Image Model Selected Perfectly")
 
     with _data_lock:
         model_status = "image_active"
@@ -565,30 +646,57 @@ def generate_image(prompt, task_id, negative_prompt="", model="sd3_5_medium"):
 
 
 def edit_image(
-    prompt, task_id, image_b64, negative_prompt="", denoise=0.6, model="sd3_5_medium", sid=None
+    prompt,
+    task_id,
+    image_b64,
+    negative_prompt="",
+    denoise=0.4,
+    model="z_image",
+    sid=None,
 ):
+    print("Image edit called with denoise", denoise)
     if not image_b64 and sid:
         with _data_lock:
             msgs = list(sessions.get(sid, []))
-        print(f"[edit_image] Scanning {len(msgs)} session messages for _image_url")
+        print(f"[edit_image] Scanning {len(msgs)} session messages for image sources")
+
         for msg in reversed(msgs):
+            # 1. Check generated image URL attribute (_image_url)
             url = (msg.get("_image_url") or "").strip()
-            role = msg.get("role", "?")
-            print(f"[edit_image]  msg role={role} _image_url={url}")
             if url:
-                parts = url.split("/")
-                fname = parts[-1] if parts else ""
+                fname = os.path.basename(url)
                 fpath = os.path.join(IMG_PATH, fname)
-                print(f"[edit_image]  checking fpath={fpath} exists={os.path.exists(fpath)}")
+                print(
+                    f"[edit_image] Checking _image_url path={fpath} exists={os.path.exists(fpath)}"
+                )
                 if os.path.exists(fpath):
                     with open(fpath, "rb") as f:
                         image_b64 = base64.b64encode(f.read()).decode()
                     break
 
+            # 2. Check user-uploaded images stored in the message's content array
+            content = msg.get("content")
+            if isinstance(content, list):
+                for part in reversed(content):
+                    if isinstance(part, dict) and part.get("type") == "image_url":
+                        img_url = part.get("image_url", {}).get("url", "")
+                        if img_url.startswith("data:image"):
+                            # Extracted base64 string directly from user upload
+                            image_b64 = img_url.split(",", 1)[-1]
+                            print(
+                                "[edit_image] Extracted base64 image from user message content"
+                            )
+                            break
+                if image_b64:
+                    break
+
     if not image_b64:
         print("[edit_image] FAILED to find an image to edit")
         return json.dumps({"error": "No image provided for editing."})
-    print(f"[edit_image] Found image ({len(image_b64)} bytes base64), proceeding with edit")
+
+    print(
+        f"[edit_image] Found image ({len(image_b64)} bytes base64), proceeding with edit"
+    )
 
     print(f"\n[image_edit] Editing image for task {task_id} with prompt: {prompt}")
     set_status(task_id, "Freeing VRAM for image editing...")
@@ -600,6 +708,7 @@ def edit_image(
 
     try:
         import folder_paths
+
         input_dir = folder_paths.get_input_directory()
     except Exception:
         input_dir = os.path.join(COMFYUI_DIR, "input")
@@ -609,65 +718,69 @@ def edit_image(
     with open(input_filepath, "wb") as f:
         f.write(base64.b64decode(image_b64))
 
-    cfg = IMAGE_MODELS.get(model, IMAGE_MODELS["sd3_5_medium"])
+    cfg = IMAGE_MODELS.get(model, IMAGE_MODELS["z_image"])
 
-    # SD 3.5 Medium Img2Img Workflow
     workflow = {
-        "1": {"class_type": "UnetLoaderGGUF", "inputs": {"unet_name": cfg["unet"]}},
-        "2": {
-            "class_type": "TripleCLIPLoaderGGUF",
+        "62": {
+            "class_type": "CLIPLoader",
+            "inputs": {"clip_name": cfg["clip1"], "type": "lumina2"},
+        },
+        "63": {"class_type": "VAELoader", "inputs": {"vae_name": cfg["vae"]}},
+        "66": {
+            "class_type": "UNETLoader",
+            "inputs": {"unet_name": cfg["unet"], "weight_dtype": "default"},
+        },
+        "67": {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"text": prompt, "clip": ["62", 0]},
+        },
+        "71": {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"text": negative_prompt, "clip": ["62", 0]},
+        },
+        "69": {
+            "class_type": "ModelSamplingAuraFlow",
+            "inputs": {"shift": 3, "model": ["66", 0]},
+        },
+        "5_load": {"class_type": "LoadImage", "inputs": {"image": input_filename}},
+        "5_scale": {
+            "class_type": "ImageScaleToTotalPixels",
             "inputs": {
-                "clip_name1": cfg["clip1"],
-                "clip_name2": cfg["clip2"],
-                "clip_name3": cfg["t5"],
-                "type": "sd3",
+                "image": ["5_load", 0],
+                "megapixels": 0.262,  # ~512x512
+                "upscale_method": "bicubic",
+                "resolution_steps": 1,
             },
         },
-        "3": {
-            "class_type": "CLIPTextEncode",
-            "inputs": {"text": prompt, "clip": ["2", 0]},
-        },
-        "4": {
-            "class_type": "CLIPTextEncode",
-            "inputs": {"text": negative_prompt, "clip": ["2", 0]},
-        },
-        "5": {
-            "class_type": "LoadImage",
-            "inputs": {"image": input_filename},
-        },
-        "7": {"class_type": "VAELoader", "inputs": {"vae_name": cfg["vae"]}},
+        # Standard VAEEncode instead of VAEEncodeForInpaint
         "5_encode": {
             "class_type": "VAEEncode",
-            "inputs": {
-                "pixels": ["5", 0],
-                "vae": ["7", 0],
-            },
+            "inputs": {"pixels": ["5_scale", 0], "vae": ["63", 0]},
         },
-        "6": {
+        "70": {
             "class_type": "KSampler",
             "inputs": {
                 "seed": random.randint(0, 2**31),
-                "steps": 20,
-                "cfg": 4.5,
-                "sampler_name": "euler",
-                "scheduler": "sgm_uniform",
-                "denoise": float(denoise),
-                "model": ["1", 0],
-                "positive": ["3", 0],
-                "negative": ["4", 0],
+                "steps": 8,
+                "cfg": 1.0,
+                "sampler_name": "res_multistep",
+                "scheduler": "simple",
+                "denoise": float(denoise),  # Dynamically controls edit depth
+                "model": ["69", 0],
+                "positive": ["67", 0],
+                "negative": ["71", 0],
                 "latent_image": ["5_encode", 0],
             },
         },
-        "8": {
+        "65": {
             "class_type": "VAEDecode",
-            "inputs": {"samples": ["6", 0], "vae": ["7", 0]},
+            "inputs": {"samples": ["70", 0], "vae": ["63", 0]},
         },
         "9": {
             "class_type": "SaveImage",
-            "inputs": {"filename_prefix": prefix, "images": ["8", 0]},
+            "inputs": {"filename_prefix": prefix, "images": ["65", 0]},
         },
     }
-
     with _data_lock:
         model_status = "image_active"
         tasks[task_id]["gen_prompt"] = prompt
@@ -732,7 +845,13 @@ def _llm_worker(task_id, sid, payload, round_num):
         if "choices" in body:
             _event_post("llm_ok", task_id, body=body, round=round_num, sid=sid)
         else:
-            _event_post("llm_err", task_id, error=f"Unexpected response ({r.status_code}): {str(body)[:300]}", round=round_num, sid=sid)
+            _event_post(
+                "llm_err",
+                task_id,
+                error=f"Unexpected response ({r.status_code}): {str(body)[:300]}",
+                round=round_num,
+                sid=sid,
+            )
     except Exception as e:
         _event_post("llm_err", task_id, error=str(e), round=round_num, sid=sid)
 
@@ -759,7 +878,15 @@ def _tool_worker(task_id, sid, tc, image_b64, round_num, tool_index):
                     t.setdefault("_search_details", []).append(json.loads(result))
                 except Exception:
                     pass
-        _event_post("tool_ok", task_id, tc_id=tc["id"], result=result, sid=sid, round=round_num, tool_index=tool_index)
+        _event_post(
+            "tool_ok",
+            task_id,
+            tc_id=tc["id"],
+            result=result,
+            sid=sid,
+            round=round_num,
+            tool_index=tool_index,
+        )
 
     elif tool_name == "edit_image":
         result = edit_image(
@@ -767,8 +894,8 @@ def _tool_worker(task_id, sid, tc, image_b64, round_num, tool_index):
             task_id=task_id,
             image_b64=image_b64,
             negative_prompt=args.get("negative_prompt", ""),
-            denoise=args.get("denoise", 0.6),
-            model="sd3_5_medium",
+            denoise=args.get("denoise", 0.4),
+            model="z_image",
             sid=sid,
         )
         res_data = json.loads(result)
@@ -791,14 +918,40 @@ def _tool_worker(task_id, sid, tc, image_b64, round_num, tool_index):
                     sessions[sid].append(msg_entry)
                     sessions_meta.setdefault(sid, {})["updated"] = time.time()
             save_sessions()
-            _event_post("img_done", task_id, image_url=image_url, tools_used=tu + [tool_name], gen_prompt=args.get("prompt", ""), image_model=None, sid=sid)
+            _event_post(
+                "img_done",
+                task_id,
+                image_url=image_url,
+                tools_used=tu + [tool_name],
+                gen_prompt=args.get("prompt", ""),
+                image_model=None,
+                sid=sid,
+            )
         else:
-            _event_post("tool_ok", task_id, tc_id=tc["id"], result=result, sid=sid, round=round_num, tool_index=tool_index)
+            _event_post(
+                "tool_ok",
+                task_id,
+                tc_id=tc["id"],
+                result=result,
+                sid=sid,
+                round=round_num,
+                tool_index=tool_index,
+            )
 
     elif tool_name == "generate_image":
         if has_generated_image:
-            result = json.dumps({"error": "Image generation limit reached for this prompt."})
-            _event_post("tool_ok", task_id, tc_id=tc["id"], result=result, sid=sid, round=round_num, tool_index=tool_index)
+            result = json.dumps(
+                {"error": "Image generation limit reached for this prompt."}
+            )
+            _event_post(
+                "tool_ok",
+                task_id,
+                tc_id=tc["id"],
+                result=result,
+                sid=sid,
+                round=round_num,
+                tool_index=tool_index,
+            )
         else:
             result = generate_image(
                 prompt=args.get("prompt", ""),
@@ -827,12 +980,36 @@ def _tool_worker(task_id, sid, tc, image_b64, round_num, tool_index):
                         sessions[sid].append(msg_entry)
                         sessions_meta.setdefault(sid, {})["updated"] = time.time()
                 save_sessions()
-                _event_post("img_done", task_id, image_url=image_url, tools_used=tu + [tool_name], gen_prompt=args.get("prompt", ""), image_model=image_model_s, sid=sid)
+                _event_post(
+                    "img_done",
+                    task_id,
+                    image_url=image_url,
+                    tools_used=tu + [tool_name],
+                    gen_prompt=args.get("prompt", ""),
+                    image_model=image_model_s,
+                    sid=sid,
+                )
             else:
-                _event_post("tool_ok", task_id, tc_id=tc["id"], result=result, sid=sid, round=round_num, tool_index=tool_index)
+                _event_post(
+                    "tool_ok",
+                    task_id,
+                    tc_id=tc["id"],
+                    result=result,
+                    sid=sid,
+                    round=round_num,
+                    tool_index=tool_index,
+                )
     else:
         result = json.dumps({"error": f"Unknown tool: {tool_name}"})
-        _event_post("tool_ok", task_id, tc_id=tc["id"], result=result, sid=sid, round=round_num, tool_index=tool_index)
+        _event_post(
+            "tool_ok",
+            task_id,
+            tc_id=tc["id"],
+            result=result,
+            sid=sid,
+            round=round_num,
+            tool_index=tool_index,
+        )
 
 
 def _prepare_session(task_id, sid, user_message, image_b64):
@@ -846,14 +1023,25 @@ def _prepare_session(task_id, sid, user_message, image_b64):
         else:
             sessions[sid].insert(0, {"role": "system", "content": full_sys_content})
         if sid not in sessions_meta:
-            sessions_meta[sid] = {"name": user_message[:50], "created": time.time(), "updated": time.time()}
+            sessions_meta[sid] = {
+                "name": user_message[:50],
+                "created": time.time(),
+                "updated": time.time(),
+            }
         content = []
         if image_b64:
-            content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}})
+            content.append(
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"},
+                }
+            )
         content.append({"type": "text", "text": user_message})
         sessions[sid].append({"role": "user", "content": content})
         if sessions_meta[sid]["name"] in ("New Chat", ""):
-            sessions_meta[sid]["name"] = user_message[:50] + ("..." if len(user_message) > 50 else "")
+            sessions_meta[sid]["name"] = user_message[:50] + (
+                "..." if len(user_message) > 50 else ""
+            )
         sessions_meta[sid]["updated"] = time.time()
     save_sessions()
     with _data_lock:
@@ -870,54 +1058,28 @@ def _start_llm_round(task_id, sid, round_num):
         t["_state"] = "llm_waiting"
         t["_round"] = round_num
         messages = trim_messages_for_context(sessions.get(sid, []))
-    payload = {"model": MODEL_ID, "messages": messages, "tools": TOOLS, "tool_choice": "auto", "max_tokens": 4096}
-    set_status(task_id, "Thinking..." if round_num == 0 else f"Thinking (round {round_num})...")
-    _llm_pool.submit(_llm_worker, task_id, sid, payload, round_num)
-
-
-def _finalize_task(task_id, sid, msg_content, body):
-    with _data_lock:
-        t = tasks.get(task_id)
-        if not t:
-            return
-        tools_used = list(t.get("_tools_used", []))
-        search_details = list(t.get("_search_details", []))
-        image_filename = t.get("image_file")
-        gen_prompt = t.get("gen_prompt")
-        image_model = t.get("_image_model")
-    image_url = f"/output/{image_filename}" if image_filename else None
-    timings = body.get("timings", {})
-    predicted_per_second = timings.get("predicted_per_second")
-    msg_entry = {
-        "role": "assistant", "content": msg_content,
-        "_tools_used": tools_used, "_image_url": image_url,
-        "_gen_prompt": gen_prompt, "_image_model": image_model,
-        "_search_details": search_details,
+    payload = {
+        "model": MODEL_ID,
+        "messages": messages,
+        "tools": TOOLS,
+        "tool_choice": "auto",
+        "max_tokens": 4096,
     }
-    with _data_lock:
-        if sid in sessions:
-            sessions[sid].append(msg_entry)
-            sessions_meta.setdefault(sid, {})["updated"] = time.time()
-        _last_tps = predicted_per_second
-        _last_llm_use = time.time()
-    save_sessions()
-    with _data_lock:
-        if task_id in tasks:
-            tasks[task_id] = {
-                "status": "done", "response": msg_content, "session_id": sid,
-                "token_estimate": estimate_tokens(sessions.get(sid, [])),
-                "predicted_per_second": predicted_per_second,
-                "tools_used": tools_used, "image": image_url, "_image_url": image_url,
-                "gen_prompt": gen_prompt, "_image_model": image_model,
-                "_search_details": search_details,
-            }
+    set_status(
+        task_id, "Thinking..." if round_num == 0 else f"Thinking (round {round_num})..."
+    )
+    _llm_pool.submit(_llm_worker, task_id, sid, payload, round_num)
 
 
 def _set_task_error(task_id, error, sid=None):
     with _data_lock:
         if task_id in tasks:
             d = tasks[task_id]
-            tasks[task_id] = {"status": "error", "error": str(error), "session_id": d.get("session_id", sid)}
+            tasks[task_id] = {
+                "status": "error",
+                "error": str(error),
+                "session_id": d.get("session_id", sid),
+            }
 
 
 def _event_loop():
@@ -933,7 +1095,15 @@ def _event_loop():
             user_message = data["message"]
             image_b64 = data.get("image")
             with _data_lock:
-                tasks[task_id] = {"status": "working", "message": "Processing task...", "session_id": sid, "_tools_used": [], "_search_details": [], "_original_message": user_message, "_original_image": image_b64}
+                tasks[task_id] = {
+                    "status": "working",
+                    "message": "Processing task...",
+                    "session_id": sid,
+                    "_tools_used": [],
+                    "_search_details": [],
+                    "_original_message": user_message,
+                    "_original_image": image_b64,
+                }
             _current_task_id = task_id
             _prepare_session(task_id, sid, user_message, image_b64)
             _start_llm_round(task_id, sid, 0)
@@ -960,7 +1130,15 @@ def _event_loop():
                         tt["_state"] = "tools_running"
                         tt["_pending_tools"] = pending
                 for i, tc in enumerate(msg["tool_calls"]):
-                    _tool_pool.submit(_tool_worker, task_id, sid, tc, t.get("_image_b64"), round_num, i)
+                    _tool_pool.submit(
+                        _tool_worker,
+                        task_id,
+                        sid,
+                        tc,
+                        t.get("_original_image"),
+                        round_num,
+                        i,
+                    )
             else:
                 _finalize_task(task_id, sid, msg.get("content", ""), body)
 
@@ -975,7 +1153,9 @@ def _event_loop():
             result = data["result"]
             with _data_lock:
                 if sid in sessions:
-                    sessions[sid].append({"role": "tool", "tool_call_id": tc_id, "content": result})
+                    sessions[sid].append(
+                        {"role": "tool", "tool_call_id": tc_id, "content": result}
+                    )
                     sessions_meta.setdefault(sid, {})["updated"] = time.time()
                 tt = tasks.get(task_id)
                 if not tt or tt.get("status") in ("done", "error"):
@@ -996,10 +1176,18 @@ def _event_loop():
                     _set_task_error(task_id, "Max tool rounds exceeded", sid)
 
         elif ev_type == "tool_err":
-            result = data.get("result", json.dumps({"error": data.get("error", "Tool error")}))
+            result = data.get(
+                "result", json.dumps({"error": data.get("error", "Tool error")})
+            )
             with _data_lock:
                 if data.get("sid") in sessions:
-                    sessions[data["sid"]].append({"role": "tool", "tool_call_id": data["tc_id"], "content": result})
+                    sessions[data["sid"]].append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": data["tc_id"],
+                            "content": result,
+                        }
+                    )
                     sessions_meta.setdefault(data["sid"], {})["updated"] = time.time()
                 tt = tasks.get(task_id)
                 if not tt or tt.get("status") in ("done", "error"):
@@ -1028,9 +1216,13 @@ def _event_loop():
             with _data_lock:
                 if task_id in tasks:
                     tasks[task_id] = {
-                        "status": "done", "response": "Here is your generated image:",
-                        "session_id": sid, "image": image_url, "_image_url": image_url,
-                        "tools_used": tools_used, "gen_prompt": gen_prompt,
+                        "status": "done",
+                        "response": "Here is your generated image:",
+                        "session_id": sid,
+                        "image": image_url,
+                        "_image_url": image_url,
+                        "tools_used": tools_used,
+                        "gen_prompt": gen_prompt,
                         "_image_model": image_model,
                     }
 
@@ -1049,12 +1241,22 @@ def _queue_worker():
                 for qitem in _task_queue:
                     tid = qitem["task_id"]
                     if tid in tasks:
-                        tasks[tid] = {"status": "waiting", "message": f"Server paused — {label}. Will resume shortly.", "session_id": qitem["session_id"]}
+                        tasks[tid] = {
+                            "status": "waiting",
+                            "message": f"Server paused — {label}. Will resume shortly.",
+                            "session_id": qitem["session_id"],
+                        }
                 _queue_cond.wait(5)
                 continue
             item = _task_queue.pop(0)
             _current_task_id = item["task_id"]
-        _event_post("start", item["task_id"], sid=item["session_id"], message=item["message"], image=item.get("image"))
+        _event_post(
+            "start",
+            item["task_id"],
+            sid=item["session_id"],
+            message=item["message"],
+            image=item.get("image"),
+        )
         # Wait for this task to finish (status becomes "done" or "error") before dequeuing the next
         while True:
             with _data_lock:
@@ -1128,7 +1330,9 @@ def _thermal_monitor():
             _gpu_temp = temp
             if temp is not None and temp >= TEMP_THRESHOLD_ON:
                 if not _overheated:
-                    print(f"[thermal] GPU {temp}°C >= {TEMP_THRESHOLD_ON}°C, OVERHEATED")
+                    print(
+                        f"[thermal] GPU {temp}°C >= {TEMP_THRESHOLD_ON}°C, OVERHEATED"
+                    )
                     _overheated = True
             elif _overheated and (temp is None or temp <= TEMP_THRESHOLD_OFF):
                 print(f"[thermal] GPU {temp}°C <= {TEMP_THRESHOLD_OFF}°C, resumed")
@@ -1223,7 +1427,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path == "/api/model-status":
             with _data_lock:
                 ms, tps, oh, gtemp = model_status, _last_tps, _overheated, _gpu_temp
-            self.send_json({"model": ms, "predicted_per_second": tps, "overheated": oh, "gpu_temp": gtemp})
+            self.send_json(
+                {
+                    "model": ms,
+                    "predicted_per_second": tps,
+                    "overheated": oh,
+                    "gpu_temp": gtemp,
+                }
+            )
         elif self.path.startswith("/output/"):
             filename = os.path.basename(urlparse(self.path).path)
             fpath = os.path.abspath(os.path.join(COMFYUI_OUTPUT, filename))
@@ -1335,7 +1546,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             sid = body.get("session_id", "default")
             with _data_lock:
                 if _overheated:
-                    self.send_json({"error": "Server overloaded — your message is queued and will be processed once the GPU cools down"}, status=503)
+                    self.send_json(
+                        {
+                            "error": "Server overloaded — your message is queued and will be processed once the GPU cools down"
+                        },
+                        status=503,
+                    )
                     return
 
             entry = {
