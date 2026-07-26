@@ -792,6 +792,32 @@
       border-color: #f87171
     }
 
+    #mic-btn {
+      background: rgba(255, 255, 255, 0.04);
+      color: #888;
+      font-size: 18px;
+      padding: 10px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all .2s
+    }
+
+    #mic-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #e0e0e0
+    }
+
+    #mic-btn.recording {
+      background: rgba(248, 113, 113, 0.2);
+      border-color: #f87171;
+      color: #f87171;
+      animation: pulseMic 1s ease-in-out infinite
+    }
+
+    @keyframes pulseMic {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(248, 113, 113, 0); }
+    }
+
     #overload-warn {
       animation: pulseWarn 1.5s ease-in-out infinite alternate
     }
@@ -834,6 +860,7 @@
     <img id="image-preview">
     <span id="file-badge"></span>
     <textarea id="msg-input" placeholder="Type a message..." rows="1" autofocus></textarea>
+    <button id="mic-btn" onclick="toggleMic()">&#127908;</button>
     <button id="send-btn" onclick="send()">Send</button>
   </div>
   <div id="image-overlay">
@@ -915,6 +942,141 @@
     document.getElementById('login-password').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') doLogin();
     });
+
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+
+    async function toggleMic() {
+      if (isRecording) {
+        stopRecording();
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+        audioChunks = [];
+        isRecording = true;
+        document.getElementById('mic-btn').classList.add('recording');
+        mediaRecorder.ondataavailable = function (e) {
+          if (e.data.size > 0) audioChunks.push(e.data);
+        };
+        mediaRecorder.onstop = function () {
+          isRecording = false;
+          document.getElementById('mic-btn').classList.remove('recording');
+          stream.getTracks().forEach(function (t) { t.stop(); });
+          const blob = new Blob(audioChunks, { type: 'audio/webm' });
+          const reader = new FileReader();
+          reader.onloadend = function () {
+            const b64 = reader.result.split(',')[1];
+            sendWithAudio(b64);
+          };
+          reader.readAsDataURL(blob);
+        };
+        mediaRecorder.start();
+      } catch (e) {
+        alert('Microphone access denied: ' + e.message);
+      }
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+    }
+
+    async function sendWithAudio(audioB64) {
+      if (!currentSid) return;
+      const text = input.value.trim();
+      input.value = '';
+      input.style.height = 'auto';
+      const taskSid = currentSid;
+      loadingSessions[taskSid] = (loadingSessions[taskSid] || 0) + 1;
+      updateLoadingUI();
+      addMsg('user', text || '🎤 Audio message', null);
+      let taskId = null;
+      try {
+        const r = await authFetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: currentSid, message: text, audio: audioB64 })
+        });
+        if (r.status === 503) {
+          const errData = await r.json();
+          addMsg('bot', errData.error || 'Server is busy.');
+          loadingSessions[taskSid]--;
+          if (!loadingSessions[taskSid]) delete loadingSessions[taskSid];
+          updateLoadingUI();
+          return;
+        }
+        const data = await r.json();
+        taskId = data.task_id;
+        var placeholderEl = addMsg('bot', statusBoxHTML('thinking', 'Thinking...'), null);
+        _pendingMsgs[taskId] = { el: placeholderEl, sid: taskSid };
+        try { sessionStorage.setItem('opencode_pending', JSON.stringify(Object.keys(_pendingMsgs).map(function(k){return {task_id:k, sid:_pendingMsgs[k].sid}}))); } catch(e) {}
+        let done = false;
+        while (!done) {
+          const s = await fetch('/api/status/' + taskId);
+          const st = await s.json();
+          if (taskSid === currentSid) {
+            var sc = placeholderEl.querySelector('.msg-content');
+            if (sc) sc.innerHTML = statusBoxHTML(statusState(st.message), st.message || 'Working...');
+          }
+          if (st.status === 'done') {
+            if (taskSid === currentSid) {
+              var el = _pendingMsgs[taskId];
+              if (el) {
+                addMsg('bot', st.response, null, st.image, st.gen_prompt, st.tools_used, st._image_model, st._search_details, el.el);
+                delete _pendingMsgs[taskId];
+              } else {
+                addMsg('bot', st.response, null, st.image, st.gen_prompt, st.tools_used, st._image_model, st._search_details);
+              }
+              try { var remaining = Object.keys(_pendingMsgs).map(function(k){return {task_id:k, sid:_pendingMsgs[k].sid}}); sessionStorage.setItem('opencode_pending', JSON.stringify(remaining)); } catch(e) {}
+              updateTokenIndicator(st.token_estimate || 0);
+              if (st.predicted_per_second != null) {
+                var tpsEl = document.getElementById('model-tps');
+                if (st.predicted_per_second < 5) {
+                  tpsEl.innerHTML = '<span style="color:#f87171">&#9888; ' + st.predicted_per_second.toFixed(1) + ' t/s</span>';
+                } else {
+                  tpsEl.textContent = st.predicted_per_second.toFixed(1) + ' t/s';
+                }
+              }
+            }
+            done = true;
+          } else if (st.status === 'error') {
+            if (taskSid === currentSid) {
+              var el = _pendingMsgs[taskId];
+              if (el) {
+                addMsg('bot', 'Error: ' + st.error, null, null, null, null, null, null, el.el);
+                delete _pendingMsgs[taskId];
+              } else {
+                addMsg('bot', 'Error: ' + st.error);
+              }
+              try { var remaining = Object.keys(_pendingMsgs).map(function(k){return {task_id:k, sid:_pendingMsgs[k].sid}}); sessionStorage.setItem('opencode_pending', JSON.stringify(remaining)); } catch(e) {}
+            }
+            done = true;
+          } else {
+            await new Promise(r => setTimeout(r, 1000));
+          }
+        }
+      } catch (e) {
+        if (taskSid === currentSid) {
+          var el = _pendingMsgs[taskId];
+          if (el) {
+            addMsg('bot', 'Error: ' + e.message, null, null, null, null, null, null, el.el);
+            delete _pendingMsgs[taskId];
+          } else {
+            addMsg('bot', 'Error: ' + e.message);
+          }
+        }
+        try { var remaining = Object.keys(_pendingMsgs).map(function(k){return {task_id:k, sid:_pendingMsgs[k].sid}}); sessionStorage.setItem('opencode_pending', JSON.stringify(remaining)); } catch(e2) {}
+      }
+      loadingSessions[taskSid]--;
+      if (!loadingSessions[taskSid]) delete loadingSessions[taskSid];
+      updateLoadingUI();
+      sessionsList = await fetchSessions();
+      renderSessions();
+    }
 
     const CODE_EXTS = new Set([".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".cpp", ".c", ".h", ".hpp", ".cs", ".go", ".rs", ".rb", ".php", ".swift", ".kt", ".scala", ".dart", ".sh", ".bash", ".pl", ".pm", ".lua", ".r", ".sql", ".html", ".css", ".scss", ".sass", ".less", ".vue", ".svelte", ".yaml", ".yml", ".json", ".xml", ".toml", ".ini", ".cfg", ".md", ".tex", ".dockerfile", ".tf", ".zig", ".nim", ".hs", ".ml", ".fs", ".erl", ".elm", ".purs", ".nix", ".ps1", ".bat", ".cmake", ".proto", ".gradle", ".tex", ".cls", ".sty", ".tex", ".bib"]);
     const MAX_FILE_SIZE = 10 * 1024 * 1024;

@@ -11,7 +11,7 @@ LLAMA_URL = f"{LLAMA_BASE}/v1/chat/completions"
 
 SEARXNG_URL = "http://localhost:8080/search"
 COMFYUI_URL = "http://localhost:8188"
-HOST, PORT = "0.0.0.0", 3000
+HOST, PORT = "0.0.0.0", 3001
 
 with open(os.path.expanduser("~/local-ai-files/model.txt"), "r") as file:
     MODEL_ID = file.read()
@@ -44,10 +44,12 @@ LLAMA_QWEN_ARGS = [
     "--cache-type-v",
     "q8_0",
 ]
+
 SESSIONS_FILE = os.path.expanduser("~/local-ai-files/sessions.json")
 IMG_PATH = os.path.expanduser("~/local-ai-files/ComfyUI/output")
 COMFYUI_INPUT = os.path.expanduser("~/local-ai-files/ComfyUI/input")
 PROMPT_PATH = os.path.expanduser("~/local-ai-files/sys_prompt.txt")
+USERS_FILE = os.path.expanduser("~/local-ai-files/users.json")
 
 with open(
     os.path.expanduser("~/local-ai-files/models.json"), "r", encoding="utf-8"
@@ -126,6 +128,23 @@ TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "update_user_context",
+            "description": "Store information about the current user that persists across conversations. Saves preferences, personal details, important facts, or anything the user should not need to repeat. This APPENDS to existing context — only add NEW information, do not repeat what was already saved.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "content": {
+                        "type": "string",
+                        "description": "The new information to append to the user's context. Keep it concise and focused on what's new."
+                    }
+                },
+                "required": ["content"]
+            },
+        },
+    },
 ]
 
 
@@ -137,10 +156,66 @@ SYS_CONTENT = SYS_CONTENT.replace("%_image_keys%", str(list(IMAGE_MODELS.keys())
 
 print("Prompt:\n", "*" * 80, "\n", SYS_CONTENT, "\n", "*" * 80)
 
-USERS = {
-    "palash": "palash90Admin",
-    "totan": "totan93",
-}
+_users_cache = None
+_users_cache_time = 0
+
+
+def load_users():
+    global _users_cache, _users_cache_time
+    now = time.time()
+    if _users_cache is not None and now - _users_cache_time < 30:
+        return _users_cache
+    try:
+        with open(USERS_FILE) as f:
+            data = json.load(f)
+        _users_cache = data.get("users", {})
+        _users_cache_time = now
+    except (FileNotFoundError, json.JSONDecodeError):
+        _users_cache = {}
+        _users_cache_time = now
+    return _users_cache
+
+
+def get_user_password(username):
+    users = load_users()
+    u = users.get(username)
+    return u.get("password", "") if u else ""
+
+
+def get_user_context_path(username):
+    users = load_users()
+    u = users.get(username)
+    if u and u.get("context_file"):
+        return os.path.join(u["context_file"])
+    return ""
+
+
+def read_user_context(username):
+    path = get_user_context_path(username)
+    print("Context path", path, "for", username)
+    if path and os.path.exists(path):
+        try:
+            print("Reading", path)
+            with open(path) as f:
+                context = f.read()
+                print(context)
+                return context
+        except:
+            return ""
+    return ""
+
+
+def write_user_context(username, content):
+    path = get_user_context_path(username)
+    if path:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        existing = read_user_context(username)
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+        entry = f"[{timestamp}] {content}"
+        new_content = (existing.strip() + "\n\n" + entry) if existing.strip() else entry
+        with open(path, "w") as f:
+            f.write(new_content)
+
 
 _active_tokens = {}
 _tokens_lock = threading.Lock()
@@ -383,6 +458,8 @@ def free_comfyui_vram():
             return True
     except Exception as e:
         print(f"[comfyui] Free error: {e}")
+    finally:
+        time.sleep(5)
     return False
 
 
@@ -834,14 +911,19 @@ def edit_image(
 
             if found_file:
                 tasks[task_id]["image_file"] = found_file
-                tasks[task_id]["_input_image"] = input_filepath
                 set_status(task_id, f"Edited image saved as {found_file}")
-                result = json.dumps({"prompt_id": prompt_id, "file": found_file, "input_file": input_filepath})
+                result = json.dumps({"prompt_id": prompt_id, "file": found_file})
             else:
                 result = json.dumps({"error": "Image editing timeout"})
     except Exception as e:
         result = json.dumps({"error": str(e)})
     finally:
+        if os.path.exists(input_filepath):
+            try:
+                os.remove(input_filepath)
+                print(f"[edit_image] Cleaned up input file: {input_filepath}")
+            except Exception as e:
+                print(f"[edit_image] Failed to cleanup input file: {e}")
         set_status(task_id, "Freeing image generation VRAM...")
         free_comfyui_vram()
         set_status(task_id, "Loading chat model...")
@@ -921,13 +1003,11 @@ def _tool_worker(task_id, sid, tc, image_b64, round_num, tool_index):
                 t = tasks.get(task_id)
                 if t:
                     t.setdefault("_tools_used", []).append(tool_name)
-            input_image_path = res_data.get("input_file", "")
             msg_entry = {
                 "role": "assistant",
                 "content": "Here is your generated image:",
                 "_tools_used": tu + [tool_name],
                 "_image_url": image_url,
-                "_input_image": input_image_path,
                 "_gen_prompt": args.get("prompt", ""),
                 "_image_model": None,
             }
@@ -943,7 +1023,6 @@ def _tool_worker(task_id, sid, tc, image_b64, round_num, tool_index):
                 tools_used=tu + [tool_name],
                 gen_prompt=args.get("prompt", ""),
                 image_model=None,
-                input_image=input_image_path,
                 sid=sid,
             )
         else:
@@ -1018,6 +1097,26 @@ def _tool_worker(task_id, sid, tc, image_b64, round_num, tool_index):
                     round=round_num,
                     tool_index=tool_index,
                 )
+    elif tool_name == "update_user_context":
+        content = args.get("content", "")
+        user = ""
+        with _data_lock:
+            t = tasks.get(task_id)
+            if t:
+                user = t.get("_user", "")
+        if user:
+            write_user_context(user, content)
+            print(f"[context] Updated context for user '{user}' ({len(content)} chars)")
+        result = json.dumps({"status": "ok", "saved": bool(user)})
+        _event_post(
+            "tool_ok",
+            task_id,
+            tc_id=tc["id"],
+            result=result,
+            sid=sid,
+            round=round_num,
+            tool_index=tool_index,
+        )
     else:
         result = json.dumps({"error": f"Unknown tool: {tool_name}"})
         _event_post(
@@ -1031,9 +1130,18 @@ def _tool_worker(task_id, sid, tc, image_b64, round_num, tool_index):
         )
 
 
-def _prepare_session(task_id, sid, user_message, image_b64):
+def _prepare_session(task_id, sid, user_message, image_b64, audio_b64=None):
     date_loc_context = f"[Current date: {datetime.now().strftime('%Y-%m-%d %A %H:%M')}] [User location: {location_str()}]"
-    full_sys_content = f"{SYS_CONTENT}\n\n{date_loc_context}"
+    user = ""
+    with _data_lock:
+        t = tasks.get(task_id)
+        if t:
+            user = t.get("_user", "")
+    user_context = read_user_context(user) if user else ""
+    context_block = f"\n\n## User Context\n{user_context}" if user_context else ""
+    full_sys_content = f"{SYS_CONTENT}\n\n{date_loc_context}{context_block}"
+    if user_context:
+        print(f"[context] Injected {len(user_context)} chars of context for user '{user}'")
     with _data_lock:
         if sid not in sessions or not sessions[sid]:
             sessions[sid] = [{"role": "system", "content": full_sys_content}]
@@ -1053,6 +1161,13 @@ def _prepare_session(task_id, sid, user_message, image_b64):
                 {
                     "type": "image_url",
                     "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"},
+                }
+            )
+        if audio_b64:
+            content.append(
+                {
+                    "type": "audio_url",
+                    "audio_url": {"url": f"data:audio/webm;base64,{audio_b64}"},
                 }
             )
         content.append({"type": "text", "text": user_message})
@@ -1113,6 +1228,8 @@ def _event_loop():
             sid = data["sid"]
             user_message = data["message"]
             image_b64 = data.get("image")
+            audio_b64 = data.get("audio")
+            user = data.get("user", "")
             with _data_lock:
                 tasks[task_id] = {
                     "status": "working",
@@ -1122,9 +1239,11 @@ def _event_loop():
                     "_search_details": [],
                     "_original_message": user_message,
                     "_original_image": image_b64,
+                    "_audio": audio_b64,
+                    "_user": user,
                 }
             _current_task_id = task_id
-            _prepare_session(task_id, sid, user_message, image_b64)
+            _prepare_session(task_id, sid, user_message, image_b64, audio_b64)
             _start_llm_round(task_id, sid, 0)
 
         elif ev_type == "llm_ok":
@@ -1232,7 +1351,6 @@ def _event_loop():
             tools_used = data["tools_used"]
             gen_prompt = data["gen_prompt"]
             image_model = data.get("image_model")
-            input_image = data.get("input_image", "")
             with _data_lock:
                 if task_id in tasks:
                     tasks[task_id] = {
@@ -1241,7 +1359,6 @@ def _event_loop():
                         "session_id": sid,
                         "image": image_url,
                         "_image_url": image_url,
-                        "_input_image": input_image,
                         "tools_used": tools_used,
                         "gen_prompt": gen_prompt,
                         "_image_model": image_model,
@@ -1277,6 +1394,8 @@ def _queue_worker():
             sid=item["session_id"],
             message=item["message"],
             image=item.get("image"),
+            audio=item.get("audio"),
+            user=item.get("user", ""),
         )
         # Wait for this task to finish (status becomes "done" or "error") before dequeuing the next
         while True:
@@ -1454,7 +1573,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        if self.path == "/api/check-auth":
+        if self.path == "/api/user-context":
+            user = get_current_user(self.headers)
+            if not user:
+                self.send_json({"error": "Unauthorized"}, status=401)
+                return
+            context = read_user_context(user)
+            self.send_json({"context": context, "username": user, "context_file": get_user_context_path(user)})
+        elif self.path == "/api/check-auth":
             user = get_current_user(self.headers)
             if user:
                 self.send_json({"authenticated": True, "username": user})
@@ -1563,10 +1689,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         fname = os.path.basename(url)
                         fpath = os.path.join(IMG_PATH, fname)
                         if os.path.exists(fpath):
+                            print(f"[delete] Removed output image: {fpath}")
                             os.remove(fpath)
-                    input_path = msg.get("_input_image", "") or ""
-                    if input_path and os.path.exists(input_path):
-                        os.remove(input_path)
+
             with _data_lock:
                 exists = sid in sessions
                 if exists:
@@ -1608,11 +1733,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             body = json.loads(self.rfile.read(length))
             username = body.get("username", "")
             password = body.get("password", "")
-            if username in USERS and USERS[username] == password:
+            if get_user_password(username) == password:
                 token = str(uuid.uuid4())
                 with _tokens_lock:
                     _active_tokens[token] = username
-                self.send_json({"token": token, "username": username})
+                self.send_json({"token": token, "username": username, "context_file": get_user_context_path(username)})
             else:
                 self.send_json({"error": "Invalid credentials"}, status=401)
         elif self.path == "/api/logout":
@@ -1620,6 +1745,29 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             with _tokens_lock:
                 _active_tokens.pop(token, None)
             self.send_json({"ok": True})
+        elif self.path == "/api/user-context":
+            user = get_current_user(self.headers)
+            if not user:
+                self.send_json({"error": "Unauthorized"}, status=401)
+                return
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(length))
+            action = body.get("action", "read")
+            if action == "write":
+                content = body.get("context", "")
+                write_user_context(user, content)
+                self.send_json({"status": "ok", "username": user})
+            elif action == "overwrite":
+                content = body.get("context", "")
+                path = get_user_context_path(user)
+                if path:
+                    os.makedirs(os.path.dirname(path), exist_ok=True)
+                    with open(path, "w") as f:
+                        f.write(content)
+                self.send_json({"status": "ok", "username": user})
+            else:
+                context = read_user_context(user)
+                self.send_json({"context": context, "username": user, "context_file": get_user_context_path(user)})
         elif self.path == "/api/chat":
             user = get_current_user(self.headers)
             if not user:
@@ -1648,6 +1796,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 "session_id": sid,
                 "message": body.get("message", ""),
                 "image": body.get("image"),
+                "audio": body.get("audio"),
+                "user": user,
             }
             with _queue_lock:
                 if len(_task_queue) >= MAX_QUEUE_SIZE:
